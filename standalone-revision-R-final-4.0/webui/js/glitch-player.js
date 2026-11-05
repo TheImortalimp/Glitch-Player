@@ -718,7 +718,9 @@
               if (window.__localArtUrl) { try { URL.revokeObjectURL(window.__localArtUrl); } catch (e) {}
                   window.__localArtUrl = null; }
               localMediaUrl = URL.createObjectURL(file);
-              if (SOFT.ear) SOFT.ear.reset();   /* R2: a new file → the ear re-warms */
+              /* R2 / Phase 7: a new file → every ear re-warms from silence */
+              if (typeof resetEarForSource === 'function') resetEarForSource(isAudio ? 'local-audio' : 'local-video');
+              else if (SOFT.ear) SOFT.ear.reset();
 
               try { if (player && player.pauseVideo) player.pauseVideo(); } catch (e) {}
               try { if (player && player.stopVideo) player.stopVideo(); } catch (e) {}
@@ -885,6 +887,8 @@
               if (cancelLocalAttempt) cancelLocalAttempt();
               if (window.GlitchHost) window.GlitchHost.cancelAllLocalMedia();
               [video, localAudio].forEach((el) => { if (el) el.pause(); });
+              /* Phase 7 (SE-05): the ears restart from silence on a YouTube start */
+              resetEarForSource('youtube');
 
               const playerVars = {
                   controls: 0,
@@ -1192,6 +1196,7 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               contrast: 0.40,   /* R1.4 SOURCE PROFILE: luminance spread */
               motion: 0.20,     /* R1.4: frame-to-frame movement */
               darkness: 0.40,   /* R1.4: 1 - light */
+              held: false,      /* Phase 7: true while the source is paused/buffering */
               colors: [],
               complement: (PALETTE_FALLBACK.hue + 180) % 360,
               accent: (PALETTE_FALLBACK.hue + 115) % 360,
@@ -1229,6 +1234,16 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               if (localArtEl && localArtEl.style.display !== 'none' && (localArtEl.naturalWidth || localArtEl
                   .videoWidth)) src = localArtEl;
               if (!src && video && video.style.display !== 'none' && video.readyState >= 2) src = video;
+              /* Phase 7 (SE-06): the YouTube iframe can never be drawn or tapped —
+                 AGENTS.md forbids all tab/desktop/WebView2 audio capture. The
+                 legal proxy reads only YT.Player state / clock / rate, curated
+                 TRACK_TIMINGS cadence, and the app's own warp canvas feedback;
+                 paused / buffering playback holds the palette silent. */
+              const ytProxy = !src && nowPlaying && nowPlaying.kind === 'youtube';
+              if (ytProxy) {
+                  if (!sampleYouTubeCadence()) return;   /* held: energy/motion → 0 */
+                  src = mainCanvas;                      /* our own feedback painting — legal visual motion */
+              }
               if (!src) return;
               let data = null;
               try {
@@ -1305,7 +1320,49 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                   contrast: srcContrast,
                   motion: srcMotion
               };
+              if (ytProxy) applyYouTubeCadence(videoPalette.target);
+              else videoPalette.held = false;
               videoPalette.valid = true;
+          }
+
+          /* Phase 7 (SE-06) — legal YouTube cadence proxy state. Derived purely
+             from YT.Player timing APIs + TRACK_TIMINGS metadata; zero audio. */
+          let ytCadence = { held: true, swell: 0, pulse: 0, drift: 0 };
+          function sampleYouTubeCadence() {
+              let state = -1, t = 0, dur = 0, rate = 1;
+              try {
+                  if (player && typeof player.getPlayerState === 'function') state = player.getPlayerState();
+                  if (player && typeof player.getCurrentTime === 'function') t = +player.getCurrentTime() || 0;
+                  if (player && typeof player.getDuration === 'function') dur = +player.getDuration() || 0;
+                  if (player && typeof player.getPlaybackRate === 'function') rate = +player.getPlaybackRate() || 1;
+              } catch (e) {}
+              const playingState = (window.YT && YT.PlayerState) ? YT.PlayerState.PLAYING : 1;
+              if (state !== playingState) {
+                  /* paused / buffering / ended — the proxy holds, honestly */
+                  ytCadence.held = true;
+                  videoPalette.held = true;
+                  videoPalette.target = {
+                      hue: videoPalette.hue, sat: videoPalette.sat, light: videoPalette.light,
+                      energy: 0, contrast: videoPalette.contrast, motion: 0
+                  };
+                  videoPalette.valid = true;
+                  return false;
+              }
+              const timing = trackTimingForVideo(nowPlaying.videoId, dur || (nowPlaying.duration || 0));
+              /* deterministic phrase clock on the legal player clock: cut
+                 (hardness) sets the pulse rate, pace slows the phrase swell */
+              const beatHz = (0.9 + 1.3 * timing.cut) * rate / Math.max(0.5, timing.pace);
+              const pulse = Math.pow(0.5 + 0.5 * Math.sin(t * beatHz * Math.PI * 2), 2);
+              const swell = 0.5 + 0.5 * Math.sin((t * beatHz / 16) * Math.PI * 2);
+              ytCadence = { held: false, swell: swell, pulse: pulse, drift: (t * (6 + 20 * timing.cut)) % 360 };
+              videoPalette.held = false;
+              return true;
+          }
+          function applyYouTubeCadence(target) {
+              if (!target || ytCadence.held) return;
+              target.hue = (((target.hue + ytCadence.drift) % 360) + 360) % 360;
+              target.energy = clamp(target.energy * (0.55 + 0.6 * ytCadence.swell) + 0.22 * ytCadence.pulse, 0.05, 1);
+              target.motion = clamp(target.motion * (0.5 + 0.8 * ytCadence.pulse) + 0.15 * ytCadence.pulse, 0, 1);
           }
 
           let tintAtlas = null,
@@ -1522,6 +1579,7 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                   burstKind: null,      // 'dia' | 'color' | 'both'
                   burstSeen: 0,         // gate.count last handled
                   burstBwFrom: 0,       // B&W level when the burst began
+                  burstBwRiding: false, // Phase 7: a dia ride is live (restored on gate end)
                   beat: 0,
                   ctx: null, analyser: null, srcNodes: new WeakMap(), tapped: null,
                   freq: null, time: null, lastAudioAt: 0, audioSource: 'none',
@@ -1580,6 +1638,19 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               if (SOFT.ctx && SOFT.ctx.state === 'suspended') SOFT.ctx.resume().catch(() => {});
           }, { passive: true }));
 
+          /* Phase 7 (SE-05): every source switch starts both ears from silence —
+             the AGC, hist ring and peak hold never carry one source's loudness
+             into the next. Called by startPlayback (YouTube / test canvas) and
+             playLocalFile (local MP3 / MP4). */
+          function resetEarForSource(kind) {
+              if (!SOFT.ok) return;
+              if (SOFT.ear && typeof SOFT.ear.reset === 'function') SOFT.ear.reset();
+              if (SOFT.earAud && typeof SOFT.earAud.reset === 'function') SOFT.earAud.reset();
+              if (SOFT.earVis && typeof SOFT.earVis.reset === 'function') SOFT.earVis.reset();
+              SOFT.audioMix = 0;
+              SOFT.audioSource = kind || 'none';
+          }
+
           function softCloneEar(s) {
               const o = {};
               if (!s) return o;
@@ -1637,7 +1708,11 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               const allowAudio = mode !== 'canvas';
               const allowCanvas = mode !== 'audio';
               const wantAudio = allowAudio && haveAudio;
-              const mixTgt = wantAudio ? 1 : 0;
+              /* Phase 7 (SE-07): while the analyser warms (< 18 frames ≈ 0.3 s)
+                 the canvas/artwork visualizer keeps most of the mix, so a fresh
+                 local file never opens with a dead, half-silent ear. */
+              const audWarmOk = !SOFT.earAud || SOFT.earAud.state.warm >= 18 / 60;
+              const mixTgt = wantAudio ? (audWarmOk ? 1 : 0.35) : 0;
               const mixRate = wantAudio ? 1.85 : (mode === 'audio' ? 0.48 : 2.15);
               SOFT.audioMix += (mixTgt - (SOFT.audioMix || 0)) * Math.min(1, dt * mixRate);
 
@@ -1658,9 +1733,13 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                          iframe), so on YouTube the picture speaks for its audio
                          with a small full-listen boost. */
                       const yt = nowPlaying && nowPlaying.kind === 'youtube';
+                      /* Phase 7: honest source badge + a held (paused) flag so
+                         the visual ear falls silent instead of lying. */
                       SOFT.earVis.feedVisual(
                           Math.min(1, videoPalette.energy * (yt ? 1.25 : 1)),
-                          Math.min(1, videoPalette.motion * (yt ? 1.3 : 1)), dt);
+                          Math.min(1, videoPalette.motion * (yt ? 1.3 : 1)), dt,
+                          { source: yt ? 'yt-vis' : 'canvas',
+                            held: yt ? !!videoPalette.held : localMediaHeld() });
                   } else {
                       softDecayEar(SOFT.earVis.state, dt, 0.85);
                   }
@@ -1690,17 +1769,37 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                   SOFT.burstSeen = SOFT.gate.state.count;
                   SOFT.burstBwFrom = effectAlphas['B&W Invert'] || 0;
               }
-              /* --- the B&W DIA shader rides the burst (cur → 0.75 negative light emission → cur) --- */
+              /* --- the B&W DIA shader rides the burst (cur → 0.75 negative light emission → cur) ---
+                 Phase 7 (SE-03): the ride only runs while an automation is
+                 actually driving the board, and never over a held, locked, or
+                 cancelled B&W Invert; when the gate ends the voice returns to
+                 its pre-burst target instead of stranding at 0.75. */
               if (SOFT.burst > 0.002 && (SOFT.burstKind === 'dia' || SOFT.burstKind === 'both') &&
+                  !automationHeld('B&W Invert') && !voiceFxLocks.bwInvert &&
+                  !isEffectCancelled('B&W Invert') &&
+                  (isContinuallyRandomizing || isAutoGlitching) &&
                   !sliderLocks['B&W Invert'] && !bwSweepActive &&
                   !(sliderElements['B&W Invert'] && document.activeElement === sliderElements['B&W Invert'])) {
                   const v = clamp01(SOFT.gate.diaValue(SOFT.burstBwFrom, SOFT.burst));
                   effectAlphas['B&W Invert'] = v;
                   randomTargets['B&W Invert'] = SOFT.burstBwFrom;
+                  SOFT.burstBwRiding = true;
                   const bel = sliderElements['B&W Invert'];
                   if (bel && Math.abs(v - (sliderWritten['B&W Invert'] || 0)) > 0.004) {
                       sliderWritten['B&W Invert'] = v;
                       bel.value = v.toFixed(3);
+                  }
+              } else if (SOFT.burstBwRiding) {
+                  /* the gate ended (or a guard rose mid-burst) — restore the
+                     pre-burst target; a cancelled voice lands at 0 instead */
+                  SOFT.burstBwRiding = false;
+                  const back = isEffectCancelled('B&W Invert') ? 0 : clamp01(SOFT.burstBwFrom);
+                  effectAlphas['B&W Invert'] = back;
+                  randomTargets['B&W Invert'] = back;
+                  const bel = sliderElements['B&W Invert'];
+                  if (bel && document.activeElement !== bel) {
+                      sliderWritten['B&W Invert'] = back;
+                      bel.value = back.toFixed(3);
                   }
               }
               /* --- hue-cycle spin accumulator: slow drift calm, rapid wheel wild --- */
@@ -1750,13 +1849,26 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               const transform = 'scaleX(' + scale + ')';
               if (el.style.transform !== transform) el.style.transform = transform;
           }
+          /* Phase 7: starts true so a boot in a held state paints nothing —
+             the one-shot PAUSED badge only lands on a live → held transition. */
+          let earHudHeldBadge = true;
           function softUpdateEarHud(now) {
               const hud = earHud.element;
               if (!hud || hud.hidden || document.hidden ||
                   !document.body.classList.contains('playback-on') ||
-                  document.documentElement.classList.contains('freeze-frame-capture') ||
-                  localMediaHeld() ||
-                  (nowPlaying.kind === 'youtube' && (!player || player.getPlayerState() !== YT.PlayerState.PLAYING))) return;
+                  document.documentElement.classList.contains('freeze-frame-capture')) return;
+              if (localMediaHeld() ||
+                  (nowPlaying.kind === 'youtube' && (!player || player.getPlayerState() !== YT.PlayerState.PLAYING))) {
+                  /* held (paused / buffering): one honest PAUSED badge, then idle */
+                  if (!earHudHeldBadge) {
+                      earHudHeldBadge = true;
+                      if (earHud.source && earHud.source.textContent !== 'src PAUSED') {
+                          earHud.source.textContent = 'src PAUSED';
+                      }
+                  }
+                  return;
+              }
+              earHudHeldBadge = false;
               if (now - earHudAt < EAR_HUD_INTERVAL_MS) return;
               earHudAt = now;
               const es = SOFT.ear ? SOFT.ear.state : null;
@@ -1785,7 +1897,12 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               }
               if (srcEl) {
                   const src = (es && es.source) || 'none';
-                  const t = 'src ' + src + ' · mix ' + mix.toFixed(2);
+                  /* Phase 7: honest badges — AUDIO (local tap), CANVAS (visual
+                     ear), YT-VIS (YouTube visual proxy; never captured audio). */
+                  const label = (src === 'local-audio' || src === 'local-video' || src === 'media') ? 'AUDIO' :
+                      src === 'yt-vis' ? 'YT-VIS' :
+                      src === 'canvas' ? 'CANVAS' : src;
+                  const t = 'src ' + label + ' · mix ' + mix.toFixed(2);
                   if (srcEl.textContent !== t) srcEl.textContent = t;
               }
           }
@@ -9235,6 +9352,10 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                   else { SOFT.cresc.state.phase = 'calm'; SOFT.cresc.state.k = 0; }
                   if (SOFT.gate && typeof SOFT.gate.reset === 'function') SOFT.gate.reset();
                   if (typeof SOFT.burst !== 'undefined') SOFT.burst = 0;
+                  /* Phase 7: a live dia ride is abandoned — ZERO ALL already
+                     lands B&W Invert at 0, nothing may restore it upward. */
+                  SOFT.burstBwRiding = false;
+                  SOFT.burstBwFrom = 0;
               }
               isContinuallyRandomizing = false;
               isAutoGlitching = false;
@@ -9647,6 +9768,7 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                       e.stopPropagation(); }
                   // The HUD still waits for confirmed playback; randomization is only armed once loading starts.
                   if (!startPlayback(FADE_WHITE_URL, true)) return;
+                  resetEarForSource('canvas');   /* Phase 7 (SE-05): fresh ears for the canvas session */
                   if (!isContinuallyRandomizing) {
                       isContinuallyRandomizing = true;
                       const btn = $('continualRandomizeBtn');

@@ -370,7 +370,11 @@
     }
 
 
-    var CHROMA_VOICES = ['Hue/Color Cycle', 'HSL Rainbow', 'Neon Grad', 'Matrix Chord'];
+    /* Phase 7: the chroma family covers the R3 twins and the colour-led
+       AI-Warp projectors too, so Soft-Eye spin/caps treat them alike. */
+    var CHROMA_VOICES = ['Hue/Color Cycle', 'HSL Rainbow', 'Neon Grad', 'Matrix Chord',
+        'R3 Hue/Color Cycle', 'R3 HSL Rainbow', 'R3 Neon Grad',
+        'Chromatic Echo', 'Prism Rift'];
 
     function hueCycleMap(level, ctx) {
         var t = clamp01(level);
@@ -509,36 +513,58 @@
         busyVoices:  [
             'ASCII', 'Matrix ASCII', 'Data Bomb', 'Gemini Bomb', 'Matrix Chord',
             'R3 ASCII', 'R3 Matrix ASCII', 'R3 Data Bomb', 'R3 Gemini Bomb', 'R3 Matrix Chord',
+            'R3 Tech Artist', 'R3 VHS Glitch',
             'Cyber Rain', 'Signal Tear', 'Temporal Slices', 'Tracking Tear'
         ],
+        /* Phase 7: stacking two or more of these in one burst group is a
+           high-flash combination — gated until the crescendo opens (k > 0.35). */
+        highFlashVoices: ['Flash', 'Strobe', 'B&W Invert', 'R3 B&W Invert'],
         /* randomizer target ceilings while calm (k = 0). Lerped to 1.0 at k = 1.
            Flash/Strobe calm caps must stay strictly within photosensitivity ceiling. */
+        /* Phase 7: every one of the 43 voices has a calm ceiling — randomizer
+           targets can never slam a voice to 1.0 while Soft-Eye sits calm. */
         calmCaps: {
             /* Lights — Soft-Eye calm holds both at 2%, far below the
                0.20 / 0.35 hard ceilings (Phase 3 FS-02) */
             'Flash': 0.02, 'Strobe': 0.02,
+            /* Core canvas voices */
+            'B&W Invert': 0.50, 'Hue/Color Cycle': 0.64, 'HSL Rainbow': 0.62,
+            'Neon Grad': 0.62, 'Scanlines': 0.60, 'VHS Glitch': 0.60,
+            'Data Bands': 0.62, 'Ink Glyphs': 0.58,
             /* Busy core voices */
             'Matrix ASCII': 0.52, 'ASCII': 0.56, 'Data Bomb': 0.52,
             'Gemini Bomb': 0.52, 'Matrix Chord': 0.64, 'Font Burn': 0.60,
-            'Tech Artist': 0.55, 'Data Bands': 0.62,
-            /* AI-Warp busy */
+            'Tech Artist': 0.55,
+            /* AI-Warp projectors */
             'Cyber Rain': 0.50, 'Signal Tear': 0.55, 'Temporal Slices': 0.56,
             'Tracking Tear': 0.58, 'Prism Rift': 0.55, 'Orbit HUD': 0.58,
+            'Chromatic Echo': 0.56, 'Rolling Scan': 0.60, 'Tape Grain': 0.62,
             /* R3 twins */
             'R3 ASCII': 0.52, 'R3 Matrix ASCII': 0.50, 'R3 Data Bomb': 0.50,
             'R3 Gemini Bomb': 0.50, 'R3 Matrix Chord': 0.62, 'R3 Font Burn': 0.58,
             'R3 Tech Artist': 0.52, 'R3 Data Bands': 0.60,
             'R3 VHS Glitch': 0.58, 'R3 B&W Invert': 0.48, 'R3 HSL Rainbow': 0.60,
-            'R3 Hue/Color Cycle': 0.62, 'R3 Gemini Bomb': 0.50
+            'R3 Hue/Color Cycle': 0.62, 'R3 Neon Grad': 0.60, 'R3 Scanlines': 0.58,
+            'R3 Ink Glyphs': 0.56, 'R3 Ghost Spectrum': 0.55, 'R3 V-Sync': 0.55
         },
-        /* paint-alpha multipliers while calm (lerped to 1.0 at k = 1) */
+        /* paint-alpha multipliers while calm (lerped to 1.0 at k = 1) —
+           Phase 7: covers all 43 voices. */
         paintCalm: {
             'Flash': 0.45, 'Strobe': 0.25,
+            'B&W Invert': 0.88, 'Hue/Color Cycle': 0.86, 'HSL Rainbow': 0.84,
+            'Neon Grad': 0.84, 'Scanlines': 0.88, 'VHS Glitch': 0.86,
+            'Data Bands': 0.86, 'Ink Glyphs': 0.82, 'Font Burn': 0.80,
+            'Tech Artist': 0.80, 'Matrix Chord': 0.78,
             'Matrix ASCII': 0.72, 'ASCII': 0.80, 'Data Bomb': 0.86, 'Gemini Bomb': 0.86,
             'Cyber Rain': 0.78, 'Signal Tear': 0.82, 'Temporal Slices': 0.84,
-            'Tracking Tear': 0.86, 'R3 ASCII': 0.74, 'R3 Matrix ASCII': 0.72,
+            'Tracking Tear': 0.86, 'Chromatic Echo': 0.84, 'Prism Rift': 0.82,
+            'Orbit HUD': 0.84, 'Rolling Scan': 0.88, 'Tape Grain': 0.90,
+            'R3 ASCII': 0.74, 'R3 Matrix ASCII': 0.72,
             'R3 Data Bomb': 0.84, 'R3 Gemini Bomb': 0.84, 'R3 Tech Artist': 0.80,
-            'R3 VHS Glitch': 0.82
+            'R3 VHS Glitch': 0.82, 'R3 B&W Invert': 0.86, 'R3 Hue/Color Cycle': 0.84,
+            'R3 HSL Rainbow': 0.82, 'R3 Neon Grad': 0.82, 'R3 Scanlines': 0.86,
+            'R3 Data Bands': 0.84, 'R3 Ink Glyphs': 0.80, 'R3 Font Burn': 0.78,
+            'R3 Matrix Chord': 0.76, 'R3 Ghost Spectrum': 0.80, 'R3 V-Sync': 0.82
         },
         /* Strobe pulse rate — kept BELOW the 3 Hz photosensitive band, always */
         strobeHz:  { calm: 1.05, wild: 2.60 },
@@ -748,6 +774,9 @@
         };
         var prev = null;
         var hist = [];   /* 1 s ring of energy for drop detection */
+        /* Phase 7 (SE-04): visual-ear band state — low-passed luminance (bass),
+           palette energy delta (mid) and frame-to-frame motion delta (treb). */
+        var visLowE = 0, visMid = 0, visTreb = 0, visPrevE = null, visPrevM = null;
         function bandMean(arr, lo, hi) {
             var s = 0, n = 0;
             for (var i = lo; i < hi && i < arr.length; i++) { s += arr[i]; n++; }
@@ -824,21 +853,64 @@
             },
             /* no audio reachable (YouTube iframe) — synthesize a pseudo-ear from the
                video canvas profile so the same automation still has a pulse.
-               SE-04 fix: st.active = true so crescendo/burstGate actually fire. */
-            feedVisual: function (energy, motion, dt) {
-                var lvl = clamp01(0.55 * (energy || 0) + 0.45 * (motion || 0));
+               SE-04 fix: st.active = true so crescendo/burstGate actually fire.
+               Phase 7: distinct pseudo-spectral bands — bass from low-passed
+               luminance swell, mid from palette energy delta, treb from the
+               frame-to-frame motion delta — and build/beat flow through the
+               same hist ring + peakHold detector the audio feed uses.
+               opts.source keeps #earHud honest ('canvas' / 'yt-vis'); opts.held
+               (paused / buffering media) silences the ear instead of lying. */
+            feedVisual: function (energy, motion, dt, opts) {
+                var src = (opts && opts.source) || 'canvas';
+                if (st.source !== src) {
+                    /* a source switch re-warms the AGC — no loudness carry-over */
+                    st.warm = 0; st.ready = false; st.peakHold = 0.2; hist.length = 0;
+                    visLowE = visMid = visTreb = 0; visPrevE = null; visPrevM = null;
+                }
+                st.source = src;
+                if (opts && opts.held) {
+                    /* playback is paused / buffering / ended — honest silence */
+                    st.active = false;
+                    var f = Math.exp(-3.2 * (dt || 0.016));
+                    st.level *= f; st.bass *= f; st.mid *= f; st.treb *= f;
+                    st.onset = 0;
+                    st.beat = Math.max(0, st.beat - (dt || 0.016) * 2.8);
+                    return st;
+                }
+                energy = clamp01(energy || 0);
+                motion = clamp01(motion || 0);
+                var lvl = clamp01(0.55 * energy + 0.45 * motion);
                 var jump = clamp01((lvl - st.level) * 5.5);
                 st.level += (lvl - st.level) * Math.min(1, dt * 3);
-                st.bass = clamp01(energy || 0); st.mid = lvl; st.treb = clamp01(motion || 0);
+                /* BASS — low-passed luminance/beat swell */
+                visLowE += (energy - visLowE) * Math.min(1, dt / 0.55);
+                st.bass = clamp01(visLowE * (1 + 0.5 * st.beat));
+                /* MID — palette chroma/energy delta (how much the colour field moved) */
+                var dE = visPrevE == null ? 0 : Math.abs(energy - visPrevE) / Math.max(dt, 1 / 240);
+                visPrevE = energy;
+                visMid += (clamp01(0.5 * lvl + 0.12 * dE) - visMid) * Math.min(1, dt * 5);
+                st.mid = clamp01(visMid);
+                /* TREB — high-frequency frame-to-frame motion delta */
+                var dM = visPrevM == null ? 0 : Math.abs(motion - visPrevM) / Math.max(dt, 1 / 240);
+                visPrevM = motion;
+                visTreb += (clamp01(0.6 * motion + 0.25 * dM) - visTreb) * Math.min(1, dt * 9);
+                st.treb = clamp01(visTreb);
                 st.onset = jump;
-                /* Active = true so createCrescendo/createBurstGate can respond.
-                   Source flagged as 'canvas' so #earHud shows the right badge. */
+                /* Active = true so createCrescendo/createBurstGate can respond. */
                 st.active = true;
-                st.source = 'canvas';
                 commonDynamics(performance.now(), dt);
                 return st;
             },
-            reset: function () { prev = null; hist.length = 0; st.active = false; st.source = 'none'; st.onset = st.beat = st.drop = st.build = st.buildCredit = 0; st.warm = 0; st.ready = false; st.peakHold = 0.2; }
+            reset: function () {
+                prev = null; hist.length = 0;
+                visLowE = visMid = visTreb = 0; visPrevE = null; visPrevM = null;
+                st.active = false; st.source = 'none';
+                st.level = st.bass = st.mid = st.treb = 0;
+                st.onset = st.beat = st.drop = st.build = st.buildCredit = 0;
+                st.flux = 0; st.fluxAvg = 0.02;
+                st.energy = st.energyFast = st.energyLong = 0;
+                st.warm = 0; st.ready = false; st.peakHold = 0.2; st.quietFor = 0;
+            }
         };
     }
 
@@ -874,9 +946,14 @@
     }
     function softMatrixK(k) { return lerp(SOFT_EYE.matrixK.calm, SOFT_EYE.matrixK.wild, clamp01(k)); }
     function softGroupAllowed(effects, k) {
+        var flashy = 0;
         for (var i = 0; i < effects.length; i++) {
             if (SOFT_EYE.lightVoices.indexOf(effects[i]) !== -1 && k < 0.45) return false;
+            if (SOFT_EYE.highFlashVoices.indexOf(effects[i]) !== -1) flashy++;
         }
+        /* Phase 7: a group stacking two or more high-flash voices waits for a
+           genuinely open crescendo (softK > 0.35). */
+        if (flashy >= 2 && !(k > 0.35)) return false;
         return true;
     }
 
