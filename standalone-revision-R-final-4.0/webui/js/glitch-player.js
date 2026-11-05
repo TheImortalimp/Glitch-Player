@@ -2039,6 +2039,227 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                   'IMORTAL', 'RIVER', 'WIRED', 'DEFCON', 'INVERT', 'DIA', 'HUE',
                   'N3ON', 'Z3R0', 'V1RUS', 'C0DEX', 'GL1TCHWAVE'
               ].forEach(add);
+
+              /* ── Expanded FontBurn universe — all canvas revisions ─────────── */
+              /* Ghost in the Shell canon */
+              [
+                  'GHOST IN THE SHELL', 'PUBLIC SECURITY', 'SECTION 9', 'ARAMAKI',
+                  'KUSANAGI', 'MOTOKO', 'BATOU', 'TOGUSA', 'ISHIKAWA', 'SAITO',
+                  'BORMA', 'PAZU', 'TACHIKOMA', 'FUCHIKOMA', 'THINK TANK',
+                  'PUPPET MASTER', 'PROJECT 2501', 'LAUGHING MAN', 'STAND ALONE COMPLEX',
+                  'INDIVIDUAL ELEVEN', 'SOLID STATE SOCIETY', 'HANKA ROBOTICS',
+                  'MEGATECH BODY', 'SERANO GENOMICS', 'VILLA STRAYLIGHT', 'TESSIER-ASHPOOL',
+                  'THERMOPTIC CAMO', 'OPTIC CAMO', 'CYBERBRAIN', 'PROSTHETIC BODY',
+                  'GHOST HACK', 'GHOST DUB', 'GHOST BARRIER', 'GHOST COMPONENT',
+                  'GHOST LINE', 'GHOST WHISPER', 'SOUL COPY', 'BODY BANK', 'SHELL UNIT',
+                  'FULL CYBORG', 'BRAIN CASE', 'CYBER SOUL', 'NET DIVE', 'BARRIER',
+                  'MEMORY PALACE', 'VISUAL CORTEX', 'GHOST WAVE', 'EMPATHIC SYSTEM',
+                  'ID TAG', 'PROTO-TYPE', 'CYBERIZATION', 'MEME HAZARD', 'SURFACE',
+                  'DEPTH', 'ACCESS LOG', 'WIRED REFLEX', 'UNWIRED', 'CUTTER',
+                  'PICUS', 'HARAWAY', 'STAND ALONE', 'NET VAST', 'INFINITE NET'
+              ].forEach(add);
+
+              /* Neuromancer / Sprawl trilogy */
+              [
+                  'NEUROMANCER', 'WINTERMUTE', 'MOLLY MILLIONS', 'HENRY CASE',
+                  'DIXIE FLATLINE', 'MAELCUM', 'CORTO', 'RIVIERA', 'FINN',
+                  'ZION CLUSTER', 'RASTAFARI AI', 'CONSOLE COWBOY', 'CYBERSPACE',
+                  'MEATSPACE', 'FLATLINE', 'ICE BREAKER', 'BLACK CLINICS',
+                  'CHIBA CITY', 'NIGHT CITY', 'THE SPRAWL', 'THE MATRIX',
+                  'INTRUSION CM', 'SIMSTIM', 'HOLOPORN', 'DATA HAVEN',
+                  'STRAYLIGHT', 'TURING', 'SCREAMING FIST', 'ARMITAGE',
+                  'SHOGUN', 'THE ASHPOOL', 'THE TESSIER', 'COUNT ZERO',
+                  'MONA LISA', 'ANGIE MITCHELL', 'BOBBY QUINE', 'SLICK'
+              ].forEach(add);
+
+              /* Blade Runner / Philip K Dick */
+              [
+                  'BLADE RUNNER', 'REPLICANT', 'NEXUS 6', 'TYRELL CORP', 'VOIGT-KAMPFF',
+                  'EMPATHY TEST', 'RACHEL', 'PRIS', 'ROY BATTY', 'LEON',
+                  'GAFF', 'DECKARD', 'SEBASTIAN', 'EYES OF GOD', 'TEARS IN RAIN',
+                  'LIKE TEARS', 'ATTACK SHIPS', 'TANNHAUSER GATE', 'C BEAMS',
+                  'DO ANDROIDS', 'ELECTRIC SHEEP', 'KIPPLE', 'EMPATHY BOX',
+                  'MERCERISM', 'PENFIELD MOOD', 'ANDROIDS DREAM', 'UBIK',
+                  'A SCANNER DARKLY', 'VALIS', 'PINK BEAM', 'PRECRIME',
+                  'PRECOG', 'MINORITY REPORT', 'FLOW MY TEARS', 'THE POLICE SAID'
+              ].forEach(add);
+
+              /* Visual glitch art / canvas effects vocabulary */
+              [
+                  'SCANLINE', 'CHROMATIC ABERRATION', 'DATAMOSH', 'DATABEND',
+                  'PIXEL SORT', 'BITCRUSH', 'FEEDBACK LOOP', 'RASTER BURN',
+                  'INTERLACE', 'PHOSPHOR DOT', 'BLOOM GLOW', 'VIGNETTE',
+                  'DITHERING', 'HALFTONE', 'COMPOSITE', 'BLEND MODE',
+                  'OVERLAY', 'MULTIPLY', 'SCREEN MODE', 'DODGE', 'BURN ART',
+                  'SOFT LIGHT MODE', 'HARD LIGHT MODE', 'DISSOLVE', 'EXCLUSION',
+                  'LUMINOSITY', 'COLOR DODGE', 'LINEAR BURN', 'VIVID LIGHT',
+                  'PIN LIGHT', 'HARD MIX', 'DIFFERENCE', 'SUBTRACT',
+                  'FRACTAL NOISE', 'TURBULENCE', 'DISPLACEMENT MAP',
+                  'CONVOLVE', 'SHARPEN', 'UNSHARP MASK', 'GAUSSIAN BLUR',
+                  'MOTION BLUR', 'RADIAL BLUR', 'ZOOM BLUR', 'TILT SHIFT',
+                  'COLOR MATRIX', 'HUE ROTATE', 'SATURATE', 'CONTRAST BOOST',
+                  'INVERT FILTER', 'SEPIA', 'DUOTONE', 'SPLIT TONE',
+                  'HALATION', 'LENS FLARE', 'LIGHT WRAP', 'EDGE GLOW',
+                  'NEON OUTLINE', 'NEON STROKE', 'INNER GLOW', 'OUTER GLOW'
+              ].forEach(add);
+
+              /* Music / scene vocabulary */
+              [
+                  'BREAKCORE', 'JUNGLE DUB', 'DRUM AND BASS', 'LIQUID DnB',
+                  'NEUROFUNK', 'DARKSTEP', 'TECHSTEP', 'HARDSTEP', 'ROLLERS',
+                  'JUMP UP', 'HALFSTEP', 'DUBSTEP', 'BROSTEP', 'RIDDEM',
+                  'GRIME', 'UK GARAGE', 'TWO STEP', 'SPEED GARAGE', 'BASSLINE',
+                  'DARKSYNTH', 'SYNTHPOP', 'RETROWAVE', 'OUTRUN', 'VAPORWAVE',
+                  'FUTURE FUNK', 'MALLSOFT', 'SLUSHWAVE', 'DREAMWAVE',
+                  'SEWERSLVT', 'GLITCH MOB', 'NEURONIST', 'MEGAMIX VOL 7',
+                  'BREAKBEAT', 'AMEN BREAK', 'THINK BREAK', 'APACHE BREAK',
+                  'REESE BASS', 'TIMESTRETCHED', 'PITCHED DOWN', 'SLOWED',
+                  'SIDECHAIN', 'REVERB TAIL', 'WET SIGNAL', 'DRY CHAIN',
+                  'ATTACK RELEASE', 'SUSTAIN LOOP', 'GATE REVERB', 'GATED',
+                  'LFO SYNC', 'MOD WHEEL', 'PITCH BEND', 'AFTERTOUCH',
+                  'VOCODER', 'TALKBOX', 'RINGMOD', 'FREQUENCY MOD',
+                  'WAVESHAPER', 'OVERDRIVE', 'FUZZ', 'DISTORTION',
+                  'BIT REDUCTION', 'SAMPLE RATE', 'ANTI-ALIAS', 'DITHER NOISE',
+                  'SOUNDSYSTEM', 'SUB BASS', 'ULTRA LOW', 'INFRASOUND',
+                  'KICK DRUM', 'SNARE ROLL', 'HIHAT', 'RIDE CYMBAL',
+                  'FOUR ON FLOOR', 'POLYRHYTHM', 'HEMIOLA', 'SYNCOPATION',
+                  'SWING FACTOR', 'GROOVE QUANTIZE', 'HUMANIZE', 'VELOCITY',
+                  'SEQUENCE', 'ARPEGGIO', 'CHORD VOICING', 'INVERSION',
+                  'DIMINISHED', 'AUGMENTED', 'SUSPENDED', 'FLAT NINE',
+                  'SHARP ELEVEN', 'ALTERED CHORD', 'TRITONE SUB', 'TURNAROUND'
+              ].forEach(add);
+
+              /* Glitch Player specific — all revisions + effects + UI */
+              [
+                  'REVISION 4', 'R4 FINAL', 'STANDALONE', 'WEBVIEW2', 'HOST BRIDGE',
+                  'CSP LOCKED', 'ORIGIN SEAL', 'MEDIA KEY', 'FREEZE FRAME',
+                  'EAR AUTO', 'EAR MONITOR', 'SOFT EYE', 'HARD LIGHT',
+                  'MOONLIGHT VEIL', 'AURORA BLOOM', 'CONFLUENCE', 'VOICE PAIR',
+                  'REALM MIX', 'REALITY RAIL', 'VIRTUAL RAIL', 'WARP ENGINE',
+                  'AI WARP', 'MILKDROP', 'DROP THE MILK', 'GHOST PROTOCOL',
+                  'VSYNC SCAN', 'VSYNC SHARP', 'VERTICAL COLOR HARMONY',
+                  'SCANPHASING', 'PRISM RIFT', 'ORBIT HUD', 'SIGNAL TEAR',
+                  'CHROMATIC ECHO', 'TEMPORAL SLICE', 'CYBER RAIN', 'TAPE GRAIN',
+                  'ROLLING SCAN', 'TRACKING TEAR', 'INK GLYPH', 'FONT BURN',
+                  'GEMINI BOMB', 'DATA BOMB', 'MATRIX CHORD', 'MATRIX ASCII',
+                  'GHOST DIA', 'GHOST SPECTRUM', 'GHOST LED', 'GHOST PLASMA',
+                  'GHOST CRT', 'B&W INVERT', 'HUE CYCLE', 'HSL RAINBOW',
+                  'NEON GRAD', 'VHS GLITCH', 'DATA BANDS', 'SCANLINES',
+                  'TECH ARTIST', 'VIDEO DISTORT', 'LANDING BACKDROP',
+                  'GLYPH RAIN', 'GHOST KEY', 'MACHINE PRESET', 'LAB 250',
+                  'DEEPSEEK ONE', 'OLD SOUL', 'ZERO ALL', 'CONTINUAL',
+                  'RANDOMIZE', 'PRESET AUTO', 'SEEDED BOARD', 'VOICE LOCK',
+                  'USER LOCK', 'PRESET LOCK', 'EFFECT CANCEL', 'PARKED',
+                  'BURST GATE', 'CRESCENDO', 'SWELL', 'WILD MODE',
+                  'AESTHETIC BURST', 'B&W SWEEP', 'ANTI-WASHOUT', 'BOARD HARMONY',
+                  'MOTION GLOW', 'SOURCE ENERGY', 'SOURCE MOTION', 'DARK KEY',
+                  'COLOR APPETITE', 'CANVAS EAR', 'AUDIO EAR', 'PEAK HOLD',
+                  'BUILD CREDIT', 'SPECTRAL FLUX', 'ONSET DETECT', 'TEMPO K',
+                  'PALETTE SAMPLE', 'VIDEO PALETTE', 'FRAME DIFF', 'EDGE DETECT',
+                  'QUALITY TIER', 'DRAW EVERY N', 'GOVERNOR', 'FRAME BUDGET',
+                  'DISPLAY REFRESH', 'CADENCE RING', 'FAST CADENCE'
+              ].forEach(add);
+
+              /* Cyberpunk / net culture extended */
+              [
+                  'CYBERSPACE', 'MEATSPACE', 'NETRUNNER', 'CORPO', 'FIXER',
+                  'TECH CLASS', 'NOMAD', 'SOLO', 'NETWATCH', 'ARASAKA',
+                  'MILITECH', 'MAXTAC', 'TRAUMA TEAM', 'PSYCHO SQUAD',
+                  'CYBERPSYCHOSIS', 'CHROME', 'CHROME JUNKIE', 'EDGERUNNER',
+                  'RIPPERDOC', 'STREET SAM', 'RAZORGIRL', 'RAZORBOY',
+                  'MONOFILAMENT', 'MANTIS BLADE', 'GORILLA ARM', 'NEURAL JACK',
+                  'KIROSHI OPTICS', 'ZETATECH', 'MILITECH CHIP', 'SANDEVISTAN',
+                  'KERENZIKOV', 'BERSERK', 'PAIN EDITOR', 'SUBDERMAL ARMOR',
+                  'SMART GUN', 'TECH WEAPON', 'POWER WEAPON', 'ICONICS',
+                  'LEGENDARY', 'RARITY TIER', 'QUICKHACK', 'BREACH PROTOCOL',
+                  'ACCESS POINT', 'ICE DAEMON', 'VIRUS PAYLOAD', 'RAM OVERCLOCK',
+                  'PING DAEMON', 'SHORT CIRCUIT', 'SYSTEM RESET', 'CONTAGION',
+                  'MEMORY WIPE', 'SYNAPSE BURNOUT', 'OVERHEAT', 'DETONATE',
+                  'WEAPON GLITCH', 'DISTRACT DAEMON', 'REBOOT OPTICS',
+                  'SUICIDE DAEMON', 'SONIC SHOCK', 'CYBERWARE MALFUNCTION'
+              ].forEach(add);
+
+              /* Mathematics / code aesthetic */
+              [
+                  'ALEPH NULL', 'OMEGA POINT', 'MANDELBROT', 'JULIA SET',
+                  'CANTOR DUST', 'STRANGE ATTRACTOR', 'PHASE SPACE',
+                  'BIFURCATION', 'LIMIT CYCLE', 'LYAPUNOV', 'HAUSDORFF',
+                  'FOURIER', 'LAPLACE', 'EULER', 'LAMBDA', 'EPSILON DELTA',
+                  'RECURSION', 'ITERATION', 'CONVERGENCE', 'DIVERGENCE',
+                  'ATTRACTOR', 'FIXED POINT', 'SADDLE POINT', 'MANIFOLD',
+                  'HOMEOMORPHISM', 'TOPOLOGY', 'HOMOTOPY', 'COHOMOLOGY',
+                  'EIGENVECTOR', 'EIGENVALUE', 'JACOBIAN', 'HESSIAN',
+                  'GRADIENT DESCENT', 'BACKPROP', 'SIGMOID', 'SOFTMAX',
+                  'ATTENTION HEAD', 'TRANSFORMER', 'EMBEDDING', 'LATENT SPACE',
+                  'DIFFUSION', 'SCORE FUNCTION', 'DENOISING', 'QUANTIZE',
+                  'PERPLEXITY', 'ENTROPY RATE', 'CROSS ENTROPY', 'KL DIVERGE'
+              ].forEach(add);
+
+              /* Colour / light science */
+              [
+                  'ULTRAVIOLET', 'INFRARED', 'BIOLUMINESCENT', 'INCANDESCENT',
+                  'FLUORESCENT', 'IRIDESCENT', 'TRANSLUCENT', 'REFRACTION',
+                  'DIFFRACTION', 'CAUSTIC', 'CREPUSCULAR', 'NACREOUS',
+                  'AUREOLE', 'CORONA LIGHT', 'HALO RING', 'UMBRA CORE',
+                  'PENUMBRA', 'NIMBUS CLOUD', 'SPECTRAL LINE', 'POLYCHROME',
+                  'TRICHROMATIC', 'METAMERIC', 'GAMUT', 'PRIMARIES', 'GAMUT MAP',
+                  'WIDE GAMUT', 'HDR PEAK', 'NITS', 'CANDELA', 'LUMEN',
+                  'ILLUMINANT D65', 'SRGB', 'DCI P3', 'REC 2020', 'ACES',
+                  'LINEAR LIGHT', 'GAMMA CORRECT', 'TONE MAP', 'EXPOSURE',
+                  'F-STOP', 'SHUTTER SPEED', 'ISO NOISE', 'GRAIN',
+                  'BOKEH', 'CIRCLE OF CONFUSION', 'DEPTH OF FIELD', 'TILT',
+                  'CHROMATIC', 'SPHERICAL', 'COMA', 'VIGNETTING', 'DISTORTION'
+              ].forEach(add);
+
+              /* Machine / system low-level */
+              [
+                  'RUNTIME', 'KERNEL', 'DAEMON', 'PROCESS TABLE', 'THREAD',
+                  'SEMAPHORE', 'MUTEX', 'SPINLOCK', 'INTERRUPT', 'PAGEFAULT',
+                  'SEGFAULT', 'CORE DUMP', 'HEAP SPRAY', 'STACK TRACE',
+                  'CALL STACK', 'STACK FRAME', 'JIT COMPILE', 'AOT COMPILE',
+                  'BYTECODE', 'OPCODE', 'REGISTER FILE', 'CACHE LINE',
+                  'TLB MISS', 'BRANCH MISS', 'PIPELINE STALL', 'SUPERSCALAR',
+                  'OOO EXEC', 'SPECTRE BUG', 'MELTDOWN', 'ROWHAMMER',
+                  'COLD BOOT', 'WARM BOOT', 'POST CODE', 'BIOS',
+                  'UEFI', 'BOOTLOADER', 'GRUB', 'EFI STUB', 'SECURE BOOT',
+                  'TPM', 'MEASURED BOOT', 'ATTESTATION', 'SEALED SECRET',
+                  'HSM', 'ENCLAVE', 'SGX', 'TDX', 'SEV SNP',
+                  'HYPERVISOR', 'VMM', 'VMEXIT', 'VMENTER', 'EPT VIOLATION',
+                  'NESTED PAGE', 'SHADOW PAGE', 'IOCTL', 'SYSCALL',
+                  'SIGNAL HANDLER', 'TRAP', 'FAULT', 'ABORT', 'EXCEPTION'
+              ].forEach(add);
+
+              /* Emotional / poetic / liminal */
+              [
+                  'LIMINAL SPACE', 'LOFI STUDY', 'AMBIENT DRONE', 'DREAMSCAPE',
+                  'NOSTALGIA TRAP', 'NOSTALGIA CORE', 'GLOOM HAZE', 'STATIC HISS',
+                  'WHITE NOISE', 'DEAD CHANNEL', 'LOST SIGNAL', 'CARRIER WAVE',
+                  'GHOST CARRIER', 'GHOST FREQUENCY', 'GHOST BAND', 'REMNANT',
+                  'RESIDUE', 'AFTERIMAGE', 'ECHO CHAMBER', 'REVERB HALL',
+                  'DELAY LINE', 'FEEDBACK RING', 'SUSTAINED TONE', 'DRONE ROOT',
+                  'HALF LIFE', 'DECAY TIME', 'RELEASE TAIL', 'SILENCE',
+                  'VOID SPACE', 'EMPTY FRAME', 'BLACK SCREEN', 'FADE OUT',
+                  'DISSOLVE IN', 'CROSS FADE', 'MATCH CUT', 'JUMP CUT',
+                  'SMASH CUT', 'WHIP PAN', 'DUTCH ANGLE', 'RACK FOCUS',
+                  'PUSH IN', 'PULL BACK', 'DOLLY ZOOM', 'VERTIGO SHOT',
+                  'LONG TAKE', 'ONE SHOT', 'UNCUT GEM', 'SEAMLESS LOOP',
+                  'INFINITE LOOP', 'ENDLESS SCROLL', 'LIVE FOREVER',
+                  'LAST TRANSMISSION', 'FINAL SIGNAL', 'END OF LINE'
+              ].forEach(add);
+
+              /* Leet / hex extended */
+              [
+                  'GH0ST', 'N3T', 'W1R3D', 'H4CK', 'R3V1S10N', '4UR0R4',
+                  'M00NL1GHT', 'D4T4', 'S1GN4L', 'V01D', 'PR1SM', 'FL1CK3R',
+                  'SC4NL1N3', 'M4TR1X', 'C0D3X', 'PH0SPH0R', '5TR0B3',
+                  'SYN7H', 'W4V3', 'PH4NT0M', 'SP3CTR3', '4N0M4LY',
+                  'S1NGU14R1TY', 'R3FR4CT10N', 'D1FF4CT10N', 'C4UST1C',
+                  '3NTR0PY', '3CH0', '4TT4CK', 'D3F3NS3', 'K3RN3L',
+                  'D43M0N', 'PR0C3SS', 'TH4R3D', '1NTERRUPT', 'P4G3F4ULT',
+                  'C0R3DUMP', 'H34PSR4Y', 'ST4CKTRACE', 'C4CHE', 'T1M3',
+                  'BUFF3R', '0V3RFL0W', '0FF BY 0N3', 'USE 4FT3R FREE',
+                  'D0UBL3 FREE', 'N4LL PTR', 'R4C3 C0ND', 'D34DL0CK'
+              ].forEach(add);
               const A = ['GHOST', 'SHELL', 'DIGITAL', 'REBIRTH', 'FEAR', 'DOT', 'COMMA', 'MAJOR', 'NET', 'SOUL'];
               const B = ['SHELL', 'HACK', 'DIVE', 'COPY', 'CAMO', 'WAVE', 'KEY', 'CODE', 'BORN', 'COMMA'];
               for (let i = 0; i < A.length; i++) {
@@ -4927,17 +5148,28 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                       rollLightTrait(name);
                       const lt = lightTrait[name];
                       lightWanderAt[name] = now + 1200 + Math.random() * 2800;
-                      /* Squaring the roll makes high levels occasional, and a light skips
-                         its peak while the other one is still near its own ceiling. */
-                      let t = Math.random() < lt.rest ? 0 : Math.pow(Math.random(), lt.pow) * lightCap(name);
-                      const other = name === 'Flash' ? 'Strobe' : 'Flash';
-                      if ((effectAlphas[other] || 0) > 0.5 * lightCap(other)) t *= 0.4;
-                      if (eng && eng.softCap) t = eng.softCap(name, t, softK());
-                      if (eng && eng.confineTarget) {
-                          t = eng.confineTarget(name, t, {
-                              ghost: getGhostMode(), vsync: getVsyncMode(),
-                              warp: isAiWarpActive, bw: bwMasterLevel()
-                          });
+                      /* Phase 3 fix (FS-02): rest rolls skip confineTarget entirely so
+                         lights actually reach 0.000. confineTarget is applied AFTER
+                         softCap so SOFT-EYE calm (softK=0) can hold lights at 0.02
+                         without confineTarget lifting a 0 rest back to the band floor. */
+                      let t;
+                      if (Math.random() < lt.rest) {
+                          /* genuine rest — skip all confinement, target is exactly 0 */
+                          t = 0;
+                      } else {
+                          t = Math.pow(Math.random(), lt.pow) * lightCap(name);
+                          /* duck while the other light is near its ceiling */
+                          const other = name === 'Flash' ? 'Strobe' : 'Flash';
+                          if ((effectAlphas[other] || 0) > 0.5 * lightCap(other)) t *= 0.4;
+                          /* apply soft-eye calm cap BEFORE confineTarget */
+                          if (eng && eng.softCap) t = eng.softCap(name, t, softK());
+                          /* confineTarget after softCap — can never re-lift a 0 rest */
+                          if (eng && eng.confineTarget) {
+                              t = eng.confineTarget(name, t, {
+                                  ghost: getGhostMode(), vsync: getVsyncMode(),
+                                  warp: isAiWarpActive, bw: bwMasterLevel()
+                              });
+                          }
                       }
                       lightWanderTarget[name] = clampLight(name, t);
                   }
@@ -7676,15 +7908,31 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
           /* R4.1 per-voice transition character. 'glide' voices always travel softly;
              'cut' voices run faster and, in the hard-cut modes, occasionally jump most of
              the way to their target (at most about once a second per voice).
-             Flash and Strobe are never listed: their automation stays on the eased path. */
+             Flash and Strobe are never listed: their automation stays on the eased path.
+             All 41 non-light voices are explicitly listed; R3 twins now included. */
           const VOICE_TRANSITION = Object.freeze({
-              'Hue/Color Cycle': 'glide', 'HSL Rainbow': 'glide', 'Neon Grad': 'glide', 'B&W Invert': 'glide',
-              'Prism Rift': 'glide', 'Chromatic Echo': 'glide', 'Orbit HUD': 'glide', 'Cyber Rain': 'glide',
-              'Ink Glyphs': 'glide', 'Tech Artist': 'glide', 'Matrix Chord': 'glide', 'Scanlines': 'glide',
-              'R3 Ghost Spectrum': 'glide', 'R3 V-Sync': 'glide', 'Tape Grain': 'glide', 'Rolling Scan': 'glide',
-              'Data Bands': 'cut', 'VHS Glitch': 'cut', 'Signal Tear': 'cut', 'Data Bomb': 'cut',
+              /* Core canvas — gliders */
+              'Hue/Color Cycle': 'glide', 'HSL Rainbow': 'glide', 'Neon Grad': 'glide',
+              'B&W Invert': 'glide', 'Ink Glyphs': 'glide', 'Tech Artist': 'glide',
+              'Matrix Chord': 'glide', 'Scanlines': 'glide',
+              /* AI-Warp — gliders */
+              'Prism Rift': 'glide', 'Chromatic Echo': 'glide', 'Orbit HUD': 'glide',
+              'Cyber Rain': 'glide', 'Tape Grain': 'glide', 'Rolling Scan': 'glide',
+              /* Core canvas — cutters */
+              'Data Bands': 'cut', 'VHS Glitch': 'cut', 'Data Bomb': 'cut',
               'Gemini Bomb': 'cut', 'ASCII': 'cut', 'Matrix ASCII': 'cut', 'Font Burn': 'cut',
-              'Temporal Slices': 'cut', 'Tracking Tear': 'cut'
+              /* AI-Warp — cutters */
+              'Signal Tear': 'cut', 'Temporal Slices': 'cut', 'Tracking Tear': 'cut',
+              /* R3 twins — gliders */
+              'R3 Neon Grad': 'glide', 'R3 Hue/Color Cycle': 'glide',
+              'R3 HSL Rainbow': 'glide', 'R3 Ink Glyphs': 'glide',
+              'R3 Tech Artist': 'glide', 'R3 Matrix Chord': 'glide',
+              'R3 Scanlines': 'glide', 'R3 Ghost Spectrum': 'glide',
+              'R3 V-Sync': 'glide', 'R3 B&W Invert': 'glide',
+              /* R3 twins — cutters */
+              'R3 Data Bands': 'cut', 'R3 VHS Glitch': 'cut', 'R3 Data Bomb': 'cut',
+              'R3 Gemini Bomb': 'cut', 'R3 ASCII': 'cut', 'R3 Matrix ASCII': 'cut',
+              'R3 Font Burn': 'cut'
           });
           const HARD_CUT_MODES = new Set(['snap', 'burst', 'flipflop']);
           const HARD_CUT_MIN_GAP_MS = 900;
@@ -8266,21 +8514,24 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               if (isAutoGlitching && autoGlitchInstances.length === 0) {
                   timedEffectsDefs.forEach((def) => {
                       if (isManualLight(def.name)) return;
+                      /* VA-01 fix: never create an instance for cancelled or locked voices */
+                      if (isEffectCancelled(def.name)) return;
+                      if (automationHeld(def.name)) return;
                       const profile = blendProfiles[def.name];
                       const ceiling = profile ? profile.peak[1] : 0.25;
                       const getStrength = () => {
                           if (autoGlitchLevel <= 0) return 0;
+                          if (isEffectCancelled(def.name)) return 0;
+                          if (automationHeld(def.name)) return 0;
+                          if (masterOpacity <= 0.001) return 0;
                           const base = smoothedStrength[def.name] || ((effectAlphas[def.name] || 0) *
                               masterOpacity);
-                          /* R1 (006 final): where the user's slider is already
-                             loud the layer whispers (25%); a quiet board sings */
+                          /* VA-01 fix: headroom was inverted — a base of 0 gave 1.0 (full blast).
+                             Now voices already active get rhythmic modulation; parked/zeroed
+                             voices only contribute through autoGlitchUnpark raising their slider. */
+                          if (base < PARKED_EPSILON) return 0;
                           const headroom = 1 - clamp01(base) * 0.75;
-                          /* v11.2: toned — auto glitch breathes WITH the ensemble
-                             instead of overriding it (softer pulse, lower ceiling) */
                           const extra = 0.82 + 0.18 * autoGlitchPulse(performance.now());
-                          /* R1.4: Auto Glitch breathes with the source — an
-                             energetic video pushes the pulses, a calm one
-                             restrains them (inside the 0.72 ceiling) */
                           return Math.min(0.72, autoGlitchLevel * ceiling * autoGlitchPulse(
                               performance.now()) * headroom * extra * clamp01(masterControls
                               .autoGlitchPower) * (0.78 + 0.40 * clamp(videoPalette.energy, 0, 1)));
@@ -8300,18 +8551,21 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               if (isAutoGlitching && !isContinuallyRandomizing && now >= nextSparkAt) {
                   if (activeEffects.length < 40) {
                       nextSparkAt = now + (1600 + Math.random() * 2600) *
-                          (1.15 - 0.30 * clamp(videoPalette.energy, 0, 1) - 0.10 * srcMotionK()) * /* R1.4 */
-                          lerp(GlitchEngine.SOFT_EYE.pace.sparkK, 0.9, softK());   /* R2: sparse sparks when calm */
+                          (1.15 - 0.30 * clamp(videoPalette.energy, 0, 1) - 0.10 * srcMotionK()) *
+                          lerp(GlitchEngine.SOFT_EYE.pace.sparkK, 0.9, softK());
                       let def = timedEffectsDefs[(Math.random() * timedEffectsDefs.length) | 0];
-                      /* R2: calm sparks skip the light voices */
+                      /* calm sparks skip the light voices */
                       if (def && !softWild() && GlitchEngine.SOFT_EYE.lightVoices.indexOf(def.name) !== -1) {
                           def = timedEffectsDefs.find((d) => d.name === 'Neon Grad') || def;
                       }
+                      /* VA-01 fix: sparks also respect cancellation and locks */
                       if (def && !isManualLight(def.name)) {
-                          const p = blendProfiles[def.name];
-                          const floor = p ? p.peak[1] * 0.75 : 0.32;
-                          activeEffects.push(def.factory(() => Math.min(0.75, floor * (0.55 + Math.random() *
-                              0.45))));
+                          if (!isEffectCancelled(def.name) && !automationHeld(def.name)) {
+                              const p = blendProfiles[def.name];
+                              const floor = p ? p.peak[1] * 0.75 : 0.32;
+                              activeEffects.push(def.factory(() => Math.min(0.75, floor * (0.55 + Math.random() *
+                                  0.45))));
+                          }
                       }
                   } else {
                       nextSparkAt = now + 3200;
@@ -8324,55 +8578,92 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
            * ------------------------------------------------------------------ */
           function randomizeBoard() {
               randomizeVoiceFx();
-              activePeakEffects = pickPeakEffects(4 + ((Math.random() * 3) | 0));
+
+              /* PR-06 fix: select a curated ensemble (3–9 voices) rather than
+                 slamming all 41 voices simultaneously. Uses fisherYates for
+                 unbiased selection. Also clears userCancelled/crParked so
+                 Randomize All works correctly after ZERO ALL. */
+              const eng = window.GlitchEngine;
+              const rngFn = Math.random;
+              const allNonLight = profileNames.filter((n) => !isManualLight(n));
+              const count = 3 + ((rngFn() * 7) | 0); // 3–9 active voices
+              const shuffled = eng && eng.fisherYates ? eng.fisherYates(allNonLight, rngFn) : allNonLight.slice().sort(() => rngFn() - 0.5);
+              const selected = new Set(shuffled.slice(0, count));
+
+              activePeakEffects = pickPeakEffects(2 + ((rngFn() * 3) | 0));
               const travelTo = {};
               let chromaLead = null;
+
               for (let i = 0; i < profileNames.length; i++) {
                   const name = profileNames[i];
-                  if (!automationHeld(name)) {
-                      const profile = blendProfiles[name];
-                      const parked = (effectAlphas[name] || 0) < PARKED_EPSILON && Math.random() < 0.5;
-                      let value = parked ? 0 : randRange(activePeakEffects.has(name) ? profile.peak :
-                          profile.ambient);
-                      if (!parked && (name === 'Hue/Color Cycle' || name === 'HSL Rainbow' ||
-                              name === 'Neon Grad')) {
-                          value = value + srcAppetite() * (0.30 + 0.45 * Math.random() - value) * 0.55;
+                  if (automationHeld(name)) continue;
+                  const profile = blendProfiles[name];
+                  let value;
+                  if (isManualLight(name)) {
+                      /* Lights: keep current automation value, don't touch */
+                      continue;
+                  } else if (selected.has(name)) {
+                      value = randRange(activePeakEffects.has(name) ? profile.peak : profile.ambient);
+                      if (name === 'Hue/Color Cycle' || name === 'HSL Rainbow' || name === 'Neon Grad') {
+                          value = value + srcAppetite() * (0.30 + 0.45 * rngFn() - value) * 0.55;
                           if (chromaLead == null) chromaLead = value;
                           else value = value * 0.45 + chromaLead * 0.55;
                       }
-                      if (window.GlitchEngine && GlitchEngine.confineTarget) {
-                          value = GlitchEngine.confineTarget(name, value, boardFilterCtx());
-                      }
-                      travelTo[name] = value;
+                      if (eng && eng.confineTarget) value = eng.confineTarget(name, value, boardFilterCtx());
+                      value = Math.max(PARKED_EFFECT_EPSILON * 2, value); // selected voices must be above parked
+                  } else {
+                      value = 0; // unselected voices park at 0
                   }
+                  travelTo[name] = value;
+                  /* PR-06 fix: update cancellation state so CR respects this randomize */
+                  crParked[name] = value < PARKED_EFFECT_EPSILON;
+                  setEffectCancelled(name, value < PARKED_EFFECT_EPSILON);
               }
+
               const op = sliderLocks.global ? masterOpacity : randRange([0.55, 0.95]);
               beginAlphaTravel(travelTo, op, 880);
               updateContinuousEffectsCache();
           }
 
           function applyRandomSeed(seed) {
-              const rng = (function(s) { return function() { s = (s * 9301 + 49297) % 233280; return s /
-                      233280; }; })(seed);
+              /* PR-07 fix: use hashSeed() to avalanche-mix the input so adjacent
+                 slider positions (0.500 vs 0.501) produce completely uncorrelated
+                 boards. Pass rng into confineTarget so there is zero Math.random()
+                 leak — identical seed → 100% identical board every time. */
+              const eng = window.GlitchEngine;
+              const seed32 = eng && eng.hashSeed ? eng.hashSeed(seed) : (((+seed || 0) * 0xFFFFFFFF) >>> 0) || 1;
+              const rng = eng && eng.mulberry32 ? eng.mulberry32(seed32) : (function(s) { return function() { s = (s * 9301 + 49297) % 233280; return s / 233280; }; })(seed32);
               customTime = rng() * 86400000;
+
+              /* Select a curated subset (3–10 voices) instead of driving all 41 */
+              const allNonLight = profileNames.filter((n) => !isManualLight(n));
+              const count = 3 + ((rng() * 8) | 0);
+              const shuffled = eng && eng.fisherYates ? eng.fisherYates(allNonLight, rng) : allNonLight.slice();
+              const selected = new Set(shuffled.slice(0, count));
+
               const travelTo = {};
               let chromaLead = null;
               for (let i = 0; i < profileNames.length; i++) {
                   const name = profileNames[i];
-                  if (!automationHeld(name)) {
-                      let v = rng();
+                  if (automationHeld(name) || isManualLight(name)) continue;
+                  let v;
+                  if (selected.has(name)) {
+                      v = rng();
                       if (name === 'Hue/Color Cycle' || name === 'HSL Rainbow' || name === 'Neon Grad') {
                           v = v + srcAppetite() * (0.30 + 0.45 * rng() - v) * 0.55;
                           if (chromaLead == null) chromaLead = v;
                           else v = v * 0.45 + chromaLead * 0.55;
                       }
-                      if (window.GlitchEngine && GlitchEngine.confineTarget) {
-                          v = GlitchEngine.confineTarget(name, v, boardFilterCtx());
+                      if (eng && eng.confineTarget) {
+                          v = eng.confineTarget(name, v, boardFilterCtx(), rng);
                       }
-                      travelTo[name] = v;
-                      crParked[name] = v < PARKED_EFFECT_EPSILON;
-                      setEffectCancelled(name, v < PARKED_EFFECT_EPSILON); /* R4.1.3: Randomize All is user intent */
+                      v = Math.max(PARKED_EFFECT_EPSILON * 2, v);
+                  } else {
+                      v = 0;
                   }
+                  travelTo[name] = v;
+                  crParked[name] = v < PARKED_EFFECT_EPSILON;
+                  setEffectCancelled(name, v < PARKED_EFFECT_EPSILON);
               }
               const op = sliderLocks.global ? masterOpacity : rng();
               beginAlphaTravel(travelTo, op, 720);
@@ -8438,22 +8729,33 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
            *  ZERO ALL EFFECTS — stops all automations, parks every slider at 0  *
            * ------------------------------------------------------------------ */
           function zeroAllEffects() {
-              // 1. Kill all automation systems
+              // 1. Kill all automation systems — VA-05 fix: stop everything
               if (typeof presetTravel !== 'undefined') { presetTravel.active = false; presetTravel.toG = null; }
-              if (SOFT.ok && SOFT.cresc.phase() !== 'calm') {   /* R2: a zero-all ends any crescendo */
-                  SOFT.cresc.state.phase = 'release';
-                  SOFT.cresc.state.since = performance.now();
-                  SOFT.cresc.state.until = performance.now() + 1500;
+              /* Stop preset auto-cycler so it can't ambush a zeroed board */
+              if (typeof presetAutoActive !== 'undefined' && presetAutoActive) {
+                  if (typeof togglePresetAuto === 'function') togglePresetAuto();
+              }
+              if (SOFT.ok) {
+                  /* Hard-park crescendo and burst gate — no dia burst after ZERO ALL */
+                  if (typeof SOFT.cresc.calmNow === 'function') SOFT.cresc.calmNow();
+                  else { SOFT.cresc.state.phase = 'calm'; SOFT.cresc.state.k = 0; }
+                  if (SOFT.gate && typeof SOFT.gate.reset === 'function') SOFT.gate.reset();
+                  if (typeof SOFT.burst !== 'undefined') SOFT.burst = 0;
               }
               isContinuallyRandomizing = false;
               isAutoGlitching = false;
               isAutomatedMasters = false;
-              setLightAutomation(false); /* ZERO ALL also switches Flash & Strobe automation OFF */
-              setMilkActive(false); /* AI WARP parity: ZERO ALL drops the milk too */
+              setLightAutomation(false);
+              setMilkActive(false);
+              /* VA-05 fix: zero Ghost, VSync, AI Warp */
+              if (typeof isAiWarpActive !== 'undefined') { isAiWarpActive = false; }
+              if (typeof ghostModeIndex !== 'undefined') { ghostModeIndex = 0; }
+              if (typeof ghostActive !== 'undefined') { ghostActive = false; ghostLevel = 0; }
+              if (typeof vsyncModeIndex !== 'undefined') { vsyncModeIndex = 0; }
               bwSweep.active = false;
               bwSweepActive = false;
               bwSweep.phase = 'idle';
-              bwSweepScheduleNext(performance.now(), 30000, 60000); // push way back
+              bwSweepScheduleNext(performance.now(), 30000, 60000);
 
               // 2. Zero every effect slider + alpha + target
               for (let i = 0; i < profileNames.length; i++) {
@@ -8462,8 +8764,8 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                   randomTargets[name] = 0;
                   sliderWritten[name] = 0;
                   smoothedStrength[name] = 0;
-                  crParked[name] = true; // R1: everything parks — CR stays quiet
-                  setEffectCancelled(name, true); // R4.1.3: and stays cancelled — nothing auto-starts after ZERO ALL
+                  crParked[name] = true;
+                  setEffectCancelled(name, true);
                   if (sliderElements[name]) sliderElements[name].value = '0.000';
               }
 
@@ -8477,32 +8779,39 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               aestheticBurstLocked = new Set();
               aestheticBurstGroupKey = null;
               aestheticBurstPhase = 'rest';
-              aestheticBurstNextAt = performance.now() + 60000; // long rest after zero
+              aestheticBurstNextAt = performance.now() + 60000;
 
-              // 5. Freeze master controls at their current values (stop automated drift)
+              // 5. Freeze master controls at their current values
               MASTER_KEYS.forEach((k) => { masterTargets[k] = masterControls[k]; });
 
-              // 5. Flush the continuous effect cache (removes all renderers)
+              // 6. Flush the continuous effect cache
               updateContinuousEffectsCache();
 
-              // 6. Kill any lingering timed effect instances
+              // 7. Kill any lingering timed effect instances and sparks
               autoGlitchInstances.forEach((fn) => {
                   const i = activeEffects.indexOf(fn);
                   if (i > -1) activeEffects.splice(i, 1);
               });
               autoGlitchInstances.length = 0;
-              nextUnparkAt = performance.now() + 60000; // long grace so unpark can't fire
+              /* VA-05 fix: clear ALL active effects, not just auto-glitch instances */
+              activeEffects.length = 0;
+              nextUnparkAt = performance.now() + 60000;
 
-              // 7. Sync button labels
+              // 8. Sync button labels
               const crBtn = $('continualRandomizeBtn');
               if (crBtn) crBtn.textContent = 'Continual Randomization: OFF';
               const agBtn = $('autoGlitchBtn');
               if (agBtn) agBtn.textContent = 'Auto Glitch: OFF';
               const amBtn = $('automatedMastersBtn');
-              if (amBtn) { amBtn.textContent = 'Automated Masters: OFF';
-                  amBtn.classList.remove('active'); }
+              if (amBtn) { amBtn.textContent = 'Automated Masters: OFF'; amBtn.classList.remove('active'); }
+              const aiBtn = $('aiWarpBtn');
+              if (aiBtn) aiBtn.textContent = 'AI Video Warp: OFF';
+              const ghostBtn = $('ghostProtocolBtn');
+              if (ghostBtn) ghostBtn.textContent = 'GHOST PROTOCOL: OFF';
+              const vsyncBtn = $('vsyncScanBtn');
+              if (vsyncBtn) vsyncBtn.textContent = 'V-SYNC: OFF';
 
-              // 8. Apply the zeroed filter chain immediately
+              // 9. Apply the zeroed filter chain immediately
               applyMasterFilters();
           }
 

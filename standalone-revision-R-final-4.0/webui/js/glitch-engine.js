@@ -224,25 +224,58 @@
     }
 
     /* Each voice: primary realm + reality/virtual bands (min,max for ambient / peak).
-       Reality = analog confine. Virtual = digital/VR confine. */
+       Reality = analog confine. Virtual = digital/VR confine.
+       Flash and Strobe bands are hard-capped at their photosensitivity ceilings (0.20/0.35)
+       in BOTH realms so confineTarget() can never propose a value above the safety cap. */
     var VOICES = {
+        /* ── Core canvas voices ─────────────────────────────────────────────── */
         'B&W Invert':      { realm: 'mix',     reality: [0.00, 0.50], virtual: [0.75, 1.00], landmarks: true },
         'Hue/Color Cycle': { realm: 'virtual', reality: [0.04, 0.35], virtual: [0.40, 1.00] },
         'HSL Rainbow':     { realm: 'virtual', reality: [0.04, 0.32], virtual: [0.35, 1.00] },
         'Neon Grad':       { realm: 'mix',     reality: [0.04, 0.40], virtual: [0.20, 0.95] },
-        'Scanlines':       { realm: 'reality', reality: [0.06, 0.55], virtual: [0.00, 0.28] },
-        'VHS Glitch':      { realm: 'reality', reality: [0.05, 0.60], virtual: [0.00, 0.35] },
-        'Data Bands':      { realm: 'reality', reality: [0.05, 0.58], virtual: [0.08, 0.70] },
-        'Flash':           { realm: 'reality', reality: [0.04, 0.48], virtual: [0.10, 0.85] },
-        'Strobe':          { realm: 'reality', reality: [0.03, 0.42], virtual: [0.12, 0.90] },
+        'Scanlines':       { realm: 'reality', reality: [0.06, 0.52], virtual: [0.00, 0.26] },
+        'VHS Glitch':      { realm: 'reality', reality: [0.05, 0.58], virtual: [0.00, 0.32] },
+        'Data Bands':      { realm: 'reality', reality: [0.05, 0.55], virtual: [0.08, 0.68] },
+        /* ── Capped lights — bands hard-bounded at photosensitivity ceilings ── */
+        'Flash':           { realm: 'reality', reality: [0.00, 0.20], virtual: [0.00, 0.20] },
+        'Strobe':          { realm: 'reality', reality: [0.00, 0.35], virtual: [0.00, 0.35] },
+        /* ── Text / glyph canvas voices ─────────────────────────────────────── */
         'ASCII':           { realm: 'virtual', reality: [0.02, 0.28], virtual: [0.25, 1.00] },
         'Font Burn':       { realm: 'virtual', reality: [0.02, 0.30], virtual: [0.22, 1.00] },
         'Tech Artist':     { realm: 'virtual', reality: [0.02, 0.26], virtual: [0.28, 1.00] },
         'Data Bomb':       { realm: 'virtual', reality: [0.00, 0.22], virtual: [0.18, 0.92] },
         'Ink Glyphs':      { realm: 'mix',     reality: [0.04, 0.45], virtual: [0.20, 1.00] },
         'Gemini Bomb':     { realm: 'virtual', reality: [0.02, 0.24], virtual: [0.16, 0.88] },
-        'Matrix ASCII':    { realm: 'mix',     reality: [0.08, 0.58], virtual: [0.22, 1.00] },
-        'Matrix Chord':    { realm: 'mix',     reality: [0.06, 0.52], virtual: [0.20, 0.95] }
+        'Matrix ASCII':    { realm: 'mix',     reality: [0.08, 0.56], virtual: [0.22, 1.00] },
+        'Matrix Chord':    { realm: 'mix',     reality: [0.06, 0.50], virtual: [0.20, 0.95] },
+        /* ── AI-Warp projector voices ────────────────────────────────────────── */
+        'Chromatic Echo':  { realm: 'mix',     reality: [0.04, 0.48], virtual: [0.12, 0.90] },
+        'Temporal Slices': { realm: 'mix',     reality: [0.04, 0.45], virtual: [0.14, 0.88] },
+        'Signal Tear':     { realm: 'mix',     reality: [0.03, 0.50], virtual: [0.10, 0.95] },
+        'Cyber Rain':      { realm: 'virtual', reality: [0.02, 0.30], virtual: [0.20, 1.00] },
+        'Prism Rift':      { realm: 'virtual', reality: [0.02, 0.28], virtual: [0.18, 0.96] },
+        'Orbit HUD':       { realm: 'virtual', reality: [0.02, 0.32], virtual: [0.14, 0.92] },
+        'Rolling Scan':    { realm: 'reality', reality: [0.04, 0.55], virtual: [0.06, 0.40] },
+        'Tape Grain':      { realm: 'reality', reality: [0.05, 0.58], virtual: [0.04, 0.36] },
+        'Tracking Tear':   { realm: 'reality', reality: [0.04, 0.52], virtual: [0.06, 0.42] },
+        /* ── Revision-3 independent twins ───────────────────────────────────── */
+        'R3 Neon Grad':         { realm: 'mix',     reality: [0.04, 0.42], virtual: [0.18, 0.95] },
+        'R3 Scanlines':         { realm: 'reality', reality: [0.06, 0.50], virtual: [0.00, 0.24] },
+        'R3 VHS Glitch':        { realm: 'reality', reality: [0.05, 0.55], virtual: [0.00, 0.30] },
+        'R3 Data Bands':        { realm: 'reality', reality: [0.05, 0.52], virtual: [0.08, 0.65] },
+        'R3 B&W Invert':        { realm: 'mix',     reality: [0.00, 0.48], virtual: [0.70, 1.00], landmarks: true },
+        'R3 Hue/Color Cycle':   { realm: 'virtual', reality: [0.04, 0.32], virtual: [0.38, 0.98] },
+        'R3 HSL Rainbow':       { realm: 'virtual', reality: [0.04, 0.30], virtual: [0.32, 0.98] },
+        'R3 ASCII':             { realm: 'virtual', reality: [0.02, 0.26], virtual: [0.22, 1.00] },
+        'R3 Font Burn':         { realm: 'virtual', reality: [0.02, 0.28], virtual: [0.20, 1.00] },
+        'R3 Tech Artist':       { realm: 'virtual', reality: [0.02, 0.24], virtual: [0.26, 1.00] },
+        'R3 Data Bomb':         { realm: 'virtual', reality: [0.00, 0.20], virtual: [0.16, 0.90] },
+        'R3 Ink Glyphs':        { realm: 'mix',     reality: [0.04, 0.42], virtual: [0.18, 0.98] },
+        'R3 Gemini Bomb':       { realm: 'virtual', reality: [0.02, 0.22], virtual: [0.14, 0.86] },
+        'R3 Matrix ASCII':      { realm: 'mix',     reality: [0.08, 0.54], virtual: [0.20, 0.98] },
+        'R3 Matrix Chord':      { realm: 'mix',     reality: [0.06, 0.48], virtual: [0.18, 0.94] },
+        'R3 Ghost Spectrum':    { realm: 'mix',     reality: [0.04, 0.50], virtual: [0.16, 0.96] },
+        'R3 V-Sync':            { realm: 'reality', reality: [0.05, 0.55], virtual: [0.08, 0.50] }
     };
 
     function ghostProfile(mode) {
@@ -287,11 +320,11 @@
         };
     }
 
-    function confineTarget(name, value, ctx) {
+    function confineTarget(name, value, ctx, rng) {
         var v = VOICES[name];
         if (!v) return clamp01(value);
         var realm = realmFromBoard(ctx);
-        var rng = (ctx && ctx.rng) || Math.random;
+        rng = (ctx && ctx.rng) || rng || Math.random;
         var band;
         if (realm === 'reality') band = v.reality;
         else if (realm === 'virtual') band = v.virtual;
@@ -473,11 +506,39 @@
         wildOnlyModes: ['flipBurst', 'zoomBurst', 'burst'],
         calmModes: ['smooth', 'linger', 'flipflop', 'smooth', 'linger'],
         lightVoices: ['Flash', 'Strobe'],
-        busyVoices:  ['ASCII', 'Matrix ASCII', 'Data Bomb', 'Gemini Bomb', 'Matrix Chord'],
-        /* randomizer target ceilings while calm (k = 0). Lerped to 1.0 at k = 1. */
-        calmCaps:  { 'Flash': 0.16, 'Strobe': 0.10, 'Matrix ASCII': 0.52, 'ASCII': 0.58, 'Data Bomb': 0.52, 'Gemini Bomb': 0.52, 'Matrix Chord': 0.66 },
+        busyVoices:  [
+            'ASCII', 'Matrix ASCII', 'Data Bomb', 'Gemini Bomb', 'Matrix Chord',
+            'R3 ASCII', 'R3 Matrix ASCII', 'R3 Data Bomb', 'R3 Gemini Bomb', 'R3 Matrix Chord',
+            'Cyber Rain', 'Signal Tear', 'Temporal Slices', 'Tracking Tear'
+        ],
+        /* randomizer target ceilings while calm (k = 0). Lerped to 1.0 at k = 1.
+           Flash/Strobe calm caps must stay strictly within photosensitivity ceiling. */
+        calmCaps: {
+            /* Lights — always capped well below hard ceilings */
+            'Flash': 0.14, 'Strobe': 0.08,
+            /* Busy core voices */
+            'Matrix ASCII': 0.52, 'ASCII': 0.56, 'Data Bomb': 0.52,
+            'Gemini Bomb': 0.52, 'Matrix Chord': 0.64, 'Font Burn': 0.60,
+            'Tech Artist': 0.55, 'Data Bands': 0.62,
+            /* AI-Warp busy */
+            'Cyber Rain': 0.50, 'Signal Tear': 0.55, 'Temporal Slices': 0.56,
+            'Tracking Tear': 0.58, 'Prism Rift': 0.55, 'Orbit HUD': 0.58,
+            /* R3 twins */
+            'R3 ASCII': 0.52, 'R3 Matrix ASCII': 0.50, 'R3 Data Bomb': 0.50,
+            'R3 Gemini Bomb': 0.50, 'R3 Matrix Chord': 0.62, 'R3 Font Burn': 0.58,
+            'R3 Tech Artist': 0.52, 'R3 Data Bands': 0.60,
+            'R3 VHS Glitch': 0.58, 'R3 B&W Invert': 0.48, 'R3 HSL Rainbow': 0.60,
+            'R3 Hue/Color Cycle': 0.62, 'R3 Gemini Bomb': 0.50
+        },
         /* paint-alpha multipliers while calm (lerped to 1.0 at k = 1) */
-        paintCalm: { 'Flash': 0.50, 'Strobe': 0.30, 'Matrix ASCII': 0.74, 'ASCII': 0.82, 'Data Bomb': 0.88, 'Gemini Bomb': 0.88 },
+        paintCalm: {
+            'Flash': 0.45, 'Strobe': 0.25,
+            'Matrix ASCII': 0.72, 'ASCII': 0.80, 'Data Bomb': 0.86, 'Gemini Bomb': 0.86,
+            'Cyber Rain': 0.78, 'Signal Tear': 0.82, 'Temporal Slices': 0.84,
+            'Tracking Tear': 0.86, 'R3 ASCII': 0.74, 'R3 Matrix ASCII': 0.72,
+            'R3 Data Bomb': 0.84, 'R3 Gemini Bomb': 0.84, 'R3 Tech Artist': 0.80,
+            'R3 VHS Glitch': 0.82
+        },
         /* Strobe pulse rate — kept BELOW the 3 Hz photosensitive band, always */
         strobeHz:  { calm: 1.05, wild: 2.60 },
         /* chroma spin multipliers (HSL Rainbow prism, Neon flow, Hue Cycle) */
@@ -508,6 +569,40 @@
     function smoothstep01(u) { u = clamp01(u); return u * u * (3 - 2 * u); }
     function easeInOutCubic01(t) { t = clamp01(t); return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
     function rangeRoll(rng, r) { return r[0] + (rng || Math.random)() * (r[1] - r[0]); }
+
+    /* ----- PRNG utilities --------------------------------------------------- */
+    /* xmur3 avalanche mixer: adjacent float inputs (0.500 vs 0.501) produce
+       completely uncorrelated 32-bit seeds (Hamming distance >> 10 bits).
+       Accepts uint32, float 0..1, or string. */
+    function hashSeed(input) {
+        var h;
+        if (typeof input === 'string') {
+            h = 0;
+            for (var ci = 0; ci < input.length; ci++) {
+                h = Math.imul(h ^ input.charCodeAt(ci), 0x9e3779b9 | 0);
+                h ^= h >>> 16;
+            }
+        } else {
+            /* float → uint32 via bit-pattern smearing */
+            h = (((+input || 0) * 0xFFFFFFFF) >>> 0) ^ 0xdeadbeef;
+        }
+        /* three xmur3 rounds */
+        h ^= h >>> 15; h = Math.imul(h, 0x85ebca6b | 0);
+        h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35 | 0);
+        h ^= h >>> 16;
+        return (h >>> 0) || 1; /* never return 0 — mulberry32(0) is degenerate */
+    }
+
+    /* Unbiased in-place Fisher-Yates shuffle. Pass a seeded rng or Math.random. */
+    function fisherYates(arr, rng) {
+        rng = rng || Math.random;
+        var copy = arr.slice();
+        for (var i = copy.length - 1; i > 0; i--) {
+            var j = (rng() * (i + 1)) | 0;
+            var tmp = copy[i]; copy[i] = copy[j]; copy[j] = tmp;
+        }
+        return copy;
+    }
 
     /* ----- CRESCENDO — calm → swell → wild → release → calm -------------- */
     function createCrescendo(opts) {
@@ -562,6 +657,12 @@
                     if (u >= 1) { st.phase = 'calm'; st.lastWildEnd = now; st.since = now; st.until = now + rangeRoll(rng, C.calmMs); st.k = 0; }
                 }
                 return st.k;
+            },
+            /* Hard-park to calm immediately — called by ZERO ALL. */
+            calmNow: function () {
+                st.phase = 'calm'; st.k = 0;
+                st.since = performance.now();
+                st.until = performance.now() + rangeRoll(rng, C.calmMs);
             }
         };
         return api;
@@ -623,6 +724,12 @@
                 var top = 0.75;
                 var e = clamp01(env);
                 return cur + (top - cur) * e;
+            },
+            /* Hard-park to calm immediately — called by ZERO ALL so burstGate
+               cannot fire a dia burst after the board has been zeroed. */
+            reset: function () {
+                st.active = false; st.env = 0; st.p = 0; st.amp = 0;
+                st.nextAt = performance.now() + B.calmGapMs[1] * 2;
             }
         };
     }
@@ -715,14 +822,17 @@
                 return st;
             },
             /* no audio reachable (YouTube iframe) — synthesize a pseudo-ear from the
-               video canvas profile so the same automation still has a pulse */
+               video canvas profile so the same automation still has a pulse.
+               SE-04 fix: st.active = true so crescendo/burstGate actually fire. */
             feedVisual: function (energy, motion, dt) {
                 var lvl = clamp01(0.55 * (energy || 0) + 0.45 * (motion || 0));
                 var jump = clamp01((lvl - st.level) * 5.5);
                 st.level += (lvl - st.level) * Math.min(1, dt * 3);
                 st.bass = clamp01(energy || 0); st.mid = lvl; st.treb = clamp01(motion || 0);
                 st.onset = jump;
-                st.active = false;
+                /* Active = true so createCrescendo/createBurstGate can respond.
+                   Source flagged as 'canvas' so #earHud shows the right badge. */
+                st.active = true;
                 st.source = 'canvas';
                 commonDynamics(performance.now(), dt);
                 return st;
@@ -799,6 +909,9 @@
     
     /* =========================================================================
        DEEPSEEK MACHINE PRESETS & ARCHETYPE GENERATOR (80 PRESETS)
+       Uses hashSeed() + mulberry32 for fully decorrelated seeding, and
+       fisherYates() for unbiased voice selection. All 43 manifest voices
+       participate. Flash/Strobe are hard-capped at photosensitivity ceilings.
        ========================================================================= */
     function mulberry32(a) {
         return function() {
@@ -816,14 +929,290 @@
     }
 
     var CODEX_WORDS = [
+        /* Original core */
         'RIVER', 'GLITCH', 'CANVAS', 'DEEPSEEK', 'WIRED', 'DEFCON', 'GHOST',
         'VSYNC', 'WARP', 'FADE', 'WHITE', 'BLACK', 'PROTOCOL', 'MACHINE',
         'PRESET', 'SPECTRUM', 'PLASMA', 'CRT', 'INVERT', 'EMISSION', 'DIA',
         'HUE', 'LOOP', 'CODEX', 'FONTBURN', '006', 'IMORTAL', 'REVISION',
         'NEON', 'PHOSPHOR', 'PRISM', 'VOID', 'SIGNAL', 'TAPE', 'AURORA',
         'MATRIX', 'CHORD', 'TYPESET', 'KATAKANA', 'CYRILLIC', 'HANZI', 'RAIN',
-        'PULSAR', 'CHROMA', 'HARMONY', 'KINETIC', 'TERRESTRIAL', 'CYBER', 'ZENITH'
+        'PULSAR', 'CHROMA', 'HARMONY', 'KINETIC', 'TERRESTRIAL', 'CYBER', 'ZENITH',
+        /* Ghost in the Shell */
+        'KUSANAGI', 'MOTOKO', 'BATOU', 'TOGUSA', 'TACHIKOMA', 'SECTION9',
+        'PUPPET', 'LAUGHING', 'STANDALONE', 'COMPLEX', 'MEGATECH', 'HANKA',
+        'THERMOPTIC', 'CYBERBRAIN', 'BARRIER', 'NETDIVE', 'MEMEHAZARD',
+        'GHOSTHACK', 'SOULCOPY', 'BODYBANK', 'SHELLUNIT', 'FULLCYBORG',
+        /* Neuromancer */
+        'NEUROMANCER', 'WINTERMUTE', 'MOLLY', 'FLATLINE', 'SPRAWL',
+        'STRAYLIGHT', 'TESSIER', 'ASHPOOL', 'ICEBREAKER', 'DIXIE', 'MAELCUM',
+        'SIMSTIM', 'SCREAMING', 'FIST', 'ARMITAGE', 'ZION',
+        /* Blade Runner */
+        'REPLICANT', 'NEXUS', 'TYRELL', 'VOIGT', 'KAMPFF', 'RACHEL',
+        'BATTY', 'DECKARD', 'TANNHAUSER', 'SHEEP', 'KIPPLE', 'UBIK',
+        /* Visual / effects */
+        'SCANLINE', 'DATAMOSH', 'DATABEND', 'BITCRUSH', 'FEEDBACK', 'RASTER',
+        'INTERLACE', 'BLOOM', 'VIGNETTE', 'DITHER', 'HALFTONE', 'COMPOSITE',
+        'TURBULENCE', 'DISPLACEMENT', 'CAUSTIC', 'AUREOLE', 'NIMBUS',
+        'HALATION', 'BOKEH', 'REFRACTION', 'DIFFRACTION', 'IRIDESCENT',
+        /* Music */
+        'BREAKCORE', 'JUNGLE', 'NEUROFUNK', 'DARKSTEP', 'DARKSYNTH',
+        'RETROWAVE', 'OUTRUN', 'VAPORWAVE', 'MALLSOFT', 'SLUSHWAVE',
+        'SEWERSLVT', 'NEURONIST', 'MEGAMIX', 'AMEN', 'REESE', 'SIDECHAIN',
+        'REVERB', 'FEEDBACK', 'DRONE', 'SUSTAIN', 'HALFSTEP', 'ROLLERS',
+        /* Glitch Player system */
+        'CONFLUENCE', 'VOICEPAIR', 'REALMMIX', 'WARPENGINE', 'MILKDROP',
+        'SOFTEYEAUR', 'HARDLIGHT', 'MOONVEIL', 'BURSTGATE', 'CRESCENDO',
+        'ZEROSALL', 'CONTINUAL', 'AESTHETIC', 'ANTIWASH', 'BOARDHARM',
+        'SCANPHASE', 'PRISMRIFT', 'ORBITHUD', 'SIGNTEAR', 'CHROMECHO',
+        'TEMPSLICE', 'CYBERRAIN', 'TAPEGRAIN', 'ROLLSCAN', 'TRACKEAR',
+        /* Cyberpunk */
+        'NETRUNNER', 'CORPO', 'EDGERUNNER', 'RIPPERDOC', 'RAZORGIRL',
+        'SANDEVISTAN', 'KERENZIKOV', 'QUICKHACK', 'BREACH', 'DAEMON',
+        'CONTAGION', 'OVERHEAT', 'SYNAPSE', 'BURNOUT', 'MALFUNCTION',
+        /* Maths / code */
+        'MANDELBROT', 'FRACTAL', 'ATTRACTOR', 'BIFURCATION', 'LYAPUNOV',
+        'FOURIER', 'LAPLACE', 'LAMBDA', 'RECURSION', 'EIGENVALUE',
+        'JACOBIAN', 'SOFTMAX', 'TRANSFORMER', 'DIFFUSION', 'LATENT',
+        /* Emotional / liminal */
+        'LIMINAL', 'AMBIENT', 'DREAMSCAPE', 'NOSTALGIA', 'STATIC',
+        'REMNANT', 'RESIDUE', 'AFTERIMAGE', 'SILENCE', 'LOOPEND',
+        /* Leet */
+        'GH0ST', 'N3ON', 'Z3R0', 'V1RUS', 'C0DEX', 'W4V3', 'PR1SM',
+        'SC4N', 'M4TR1X', 'PH0SPH0R', '5TR0B3', 'SYN7H', 'PH4NT0M',
+        'SP3CTR3', '4N0M4LY', 'D43M0N', 'D34DL0CK', 'GL1TCHWAVE'
     ];
+
+    function mintPresetTag(rng, used) {
+        var codex = CODEX_WORDS;
+        var pick = function () { return codex[(rng() * codex.length) | 0] || 'SIGNAL'; };
+        for (var n = 0; n < 24; n++) {
+            var a = pick(), b = pick();
+            var forms = [
+                a + ' ' + b,
+                leetEncodeWord(a) + ' ' + b,
+                a + '-' + b,
+                '006 ' + a,
+                a + ' ' + leetEncodeWord(b),
+                b + ' ' + a,
+                a + ' CODEX',
+                'DIA ' + a,
+                'GHOST ' + a,
+                a + ' SHELL',
+                'REBIRTH ' + b,
+                'f34R ' + a
+            ];
+            var tag = forms[(rng() * forms.length) | 0];
+            if (tag.length > 28) tag = (a + ' ' + b).slice(0, 28);
+            if (!used[tag] && a !== b) { used[tag] = 1; return tag; }
+        }
+        var fallback = 'SEED ' + ((rng() * 0xFFFF) | 0).toString(16).toUpperCase();
+        used[fallback] = 1;
+        return fallback;
+    }
+
+    function randBwLevel(rng) {
+        var roll = rng();
+        if (roll < 0.22) return 0;
+        if (roll < 0.48) return 0.50;
+        if (roll < 0.82) return 0.75;
+        return 1.0;
+    }
+
+    /* Light ceiling constants — these are the absolute caps for the generator */
+    var LIGHT_CEILING = { 'Flash': 0.20, 'Strobe': 0.35 };
+
+    function buildMachinePresets(customSeed) {
+        /* ── Voice families (all 43 manifest voices) ───────────────────────── */
+        var FAMILY = {
+            core: [
+                'Neon Grad', 'Scanlines', 'Data Bands', 'HSL Rainbow', 'ASCII',
+                'Font Burn', 'Gemini Bomb', 'Tech Artist', 'VHS Glitch',
+                'Data Bomb', 'Ink Glyphs', 'Matrix ASCII', 'Matrix Chord'
+            ],
+            master: ['B&W Invert', 'Hue/Color Cycle'],
+            lights: ['Flash', 'Strobe'],
+            warp: [
+                'Chromatic Echo', 'Temporal Slices', 'Signal Tear', 'Cyber Rain',
+                'Prism Rift', 'Orbit HUD', 'Rolling Scan', 'Tape Grain', 'Tracking Tear'
+            ],
+            r3: [
+                'R3 Neon Grad', 'R3 Scanlines', 'R3 VHS Glitch', 'R3 Data Bands',
+                'R3 B&W Invert', 'R3 Hue/Color Cycle', 'R3 HSL Rainbow',
+                'R3 ASCII', 'R3 Font Burn', 'R3 Tech Artist', 'R3 Data Bomb',
+                'R3 Ink Glyphs', 'R3 Gemini Bomb', 'R3 Matrix ASCII',
+                'R3 Matrix Chord', 'R3 Ghost Spectrum', 'R3 V-Sync'
+            ]
+        };
+        var ALL_VOICES = FAMILY.core.concat(FAMILY.master, FAMILY.lights, FAMILY.warp, FAMILY.r3);
+
+        /* ── Density archetypes: [minActive, maxActive, r3Allowed, warpAllowed] */
+        var DENSITY = [
+            { name: 'whisper',  minA: 2, maxA: 4,  r3k: 0.15, wk: 0.20 },
+            { name: 'sketch',   minA: 3, maxA: 5,  r3k: 0.25, wk: 0.30 },
+            { name: 'medium',   minA: 4, maxA: 7,  r3k: 0.40, wk: 0.40 },
+            { name: 'lush',     minA: 5, maxA: 9,  r3k: 0.55, wk: 0.50 },
+            { name: 'storm',    minA: 6, maxA: 11, r3k: 0.70, wk: 0.65 }
+        ];
+
+        var GHOST_MODES_LIST = ['OFF', 'DIA', 'SPECTRUM', 'CRT', 'PLASMA', 'LED'];
+        var VSYNC_MODES_LIST = ['OFF', 'ON', 'GHOST_OFF', 'FULL'];
+        var WARP_MODES = [
+            'aurora', 'prism', 'scan', 'crt', 'void', 'plasma', 'vortex', 'nebula',
+            'laser', 'horizon', 'echo', 'bloom', 'rift', 'pulse', 'silk', 'ember',
+            'frost', 'acid', 'velvet', 'chrome', 'sonar', 'mirage', 'flux', 'halo',
+            'abyss', 'cipher', 'solstice', 'ion', 'dusk', 'zenith'
+        ];
+
+        /* Seed: hashSeed() ensures adjacent float values (0.500 vs 0.501) produce
+           fully decorrelated 32-bit seeds, fixing the old LCG correlation bug. */
+        var rawSeed = (typeof customSeed === 'number' && Number.isFinite(customSeed))
+            ? customSeed
+            : ((Date.now() ^ (Math.random() * 0xFFFFFF)) >>> 0) || 1;
+        var seed = hashSeed(rawSeed);
+        var rng  = mulberry32(seed);
+        var usedTags = Object.create(null);
+
+        var DEFAULT_MASTERS = {
+            effectIntensity: 0.85, motionScale: 0.80, blendSoftness: 0.50,
+            continualSpeed: 0.85, autoGlitchPower: 0.70, boardEnergy: 0.65
+        };
+
+        var out = {};
+        for (var i = 0; i < 80; i++) {
+            var name = 'Deepseek-' + (i + 1);
+            var tag = (i === 0) ? 'OLD SOUL' : mintPresetTag(rng, usedTags);
+
+            /* ── Pick density archetype ──────────────────────────────────────── */
+            var archIdx = i === 0 ? 0 : (rng() * DENSITY.length) | 0;
+            var arch = DENSITY[archIdx];
+            var activeCount = arch.minA + ((rng() * (arch.maxA - arch.minA + 1)) | 0);
+
+            /* ── Build voice pool for this preset ─────────────────────────────
+               Always include core; conditionally include r3/warp by archetype odds */
+            var pool = FAMILY.core.slice();
+            if (rng() < 0.65) pool = pool.concat(FAMILY.master);
+            FAMILY.warp.forEach(function (v) { if (rng() < arch.wk) pool.push(v); });
+            FAMILY.r3.forEach(function (v) { if (rng() < arch.r3k) pool.push(v); });
+
+            /* fisherYates for unbiased selection — no more .sort(() => rng()-0.5) bias */
+            var shuffled = fisherYates(pool, rng);
+            var selected = shuffled.slice(0, Math.min(activeCount, shuffled.length));
+
+            /* ── Assign alphas ────────────────────────────────────────────────── */
+            var alphas = {};
+            ALL_VOICES.forEach(function (v) { alphas[v] = 0; });
+
+            /* Deepseek-1 OLD SOUL: preserved calm baseline */
+            if (i === 0) {
+                alphas['Neon Grad']    = 0.18;
+                alphas['Scanlines']    = 0.14;
+                alphas['HSL Rainbow']  = 0.18;
+                alphas['ASCII']        = 0.22;
+                alphas['Font Burn']    = 0.26;
+                alphas['Gemini Bomb']  = 0.20;
+                alphas['Tech Artist']  = 0.18;
+                alphas['VHS Glitch']   = 0.18;
+                alphas['Data Bands']   = 0.12;
+                /* Flash/Strobe strictly at ceiling */
+                alphas['Flash']        = 0.20;
+                alphas['Strobe']       = 0.35;
+            } else {
+                selected.forEach(function (v) {
+                    var isLight = v === 'Flash' || v === 'Strobe';
+                    if (isLight) {
+                        var cap = LIGHT_CEILING[v];
+                        alphas[v] = +(rng() * cap).toFixed(3);
+                    } else if (v === 'B&W Invert' || v === 'R3 B&W Invert') {
+                        alphas[v] = randBwLevel(rng);
+                    } else {
+                        /* role-aware levels: one "lead" voice gets higher alpha */
+                        var isLead = selected.indexOf(v) === 0;
+                        var lo = isLead ? 0.28 : 0.06;
+                        var hi = isLead ? 0.82 : 0.55;
+                        alphas[v] = +(lo + rng() * (hi - lo)).toFixed(3);
+                    }
+                });
+            }
+
+            /* ── AI Warp ─────────────────────────────────────────────────────── */
+            var warpMode     = WARP_MODES[(rng() * WARP_MODES.length) | 0];
+            var warpStrength = i === 0 ? 0.45 : +(0.18 + rng() * 0.44).toFixed(2);
+            var masterOpacity = i === 0 ? 0.88 : +(0.72 + rng() * 0.20).toFixed(2);
+
+            /* ── Ghost / V-Sync ──────────────────────────────────────────────── */
+            var gm = (i === 0) ? 'OFF' : (rng() < 0.35 ? 'OFF' : GHOST_MODES_LIST[(rng() * GHOST_MODES_LIST.length) | 0]);
+            var vm = (i === 0) ? 'OFF' : (rng() < 0.35 ? 'OFF' : VSYNC_MODES_LIST[(rng() * VSYNC_MODES_LIST.length) | 0]);
+            var gl = gm === 'OFF' ? 0 : +(0.18 + rng() * 0.45).toFixed(3);
+            var vl = vm === 'OFF' ? 0 : +(0.20 + rng() * 0.45).toFixed(3);
+
+            /* ── Automation toggles ──────────────────────────────────────────── */
+            var ag      = i !== 0 && rng() < 0.25;
+            var cr      = i !== 0 && rng() < 0.40;
+            var am      = i !== 0 && rng() < 0.25;
+            var softEye = i !== 0 && rng() < 0.20 ? (rng() < 0.5 ? 'SURGE' : 'CRESCENDO') : 'OFF';
+
+            /* ── Per-preset glyph bank (every MACHINE preset defines one — no state bleed) */
+            var GLYPH_BANKS = [
+                'Engine realms (Revision 3)', 'All scripts',
+                'latin', 'katakana', 'cyrillic', 'greek', 'hebrew', 'arabic',
+                'devanagari', 'thai', 'hangul', 'hanzi', 'javanese', 'symbols',
+                'superscript', 'mathoperator', 'ghostkey'
+            ];
+            var gbRoll = rng();
+            var glyphBank = gbRoll < 0.20 ? 'Engine realms (Revision 3)'
+                         : gbRoll < 0.30 ? 'All scripts'
+                         : GLYPH_BANKS[2 + ((rng() * (GLYPH_BANKS.length - 2)) | 0)];
+
+            /* ── Optional locks ──────────────────────────────────────────────── */
+            var lockMap = {};
+            if (i !== 0 && rng() < 0.15) {
+                var lkCandidates = selected.filter(function (v) { return alphas[v] > 0.10; });
+                if (lkCandidates.length) lockMap[lkCandidates[(rng() * lkCandidates.length) | 0]] = true;
+            }
+
+            /* ── Master controls ─────────────────────────────────────────────── */
+            var masterMix = Object.assign({}, DEFAULT_MASTERS);
+            if (i !== 0) {
+                masterMix.effectIntensity = +(0.50 + rng() * 0.35).toFixed(3);
+                masterMix.motionScale     = +(0.45 + rng() * 0.45).toFixed(3);
+                masterMix.blendSoftness   = +(0.30 + rng() * 0.50).toFixed(3);
+                masterMix.continualSpeed  = +(0.65 + rng() * 0.55).toFixed(3);
+                masterMix.autoGlitchPower = +(0.40 + rng() * 0.45).toFixed(3);
+                masterMix.boardEnergy     = +(0.35 + rng() * 0.45).toFixed(3);
+            }
+
+            out[name] = {
+                machine: true,
+                tag: tag,
+                seed: seed,
+                alphas: alphas,
+                masterOpacity: masterOpacity,
+                ghostLevel: gl,
+                ghostMode: gm,
+                vsyncMode: vm,
+                aiWarp: true,
+                warpMode: warpMode,
+                warpStrength: warpStrength,
+                glyphBank: glyphBank,
+                hardLight: !!(i !== 0 && arch.name === 'storm' && rng() < 0.18),
+                vsyncLevels: {
+                    ON: vm === 'ON' ? vl : 0.50,
+                    GHOST_OFF: vm === 'GHOST_OFF' ? vl : 0.55,
+                    FULL: vm === 'FULL' ? vl : 0.60
+                },
+                masterControls: masterMix,
+                locks: lockMap,
+                toggles: {
+                    autoGlitch: !!ag,
+                    continualRandomize: !!cr,
+                    automatedMasters: !!am,
+                    softEyeMode: softEye,
+                    aiWarp: true
+                }
+            };
+        }
+        return out;
+    }
 
     function mintPresetTag(rng, used) {
         var codex = CODEX_WORDS;
@@ -1075,8 +1464,10 @@
         smoothstep01: smoothstep01,
         easeInOutCubic01: easeInOutCubic01,
         mulberry32: mulberry32,
+        hashSeed: hashSeed,
+        fisherYates: fisherYates,
         buildMachinePresets: buildMachinePresets,
         mintPresetTag: mintPresetTag,
-        version: 'engine-2.0-softeye'
+        version: 'engine-4.3.1-softeye'
     };
 })(typeof window !== 'undefined' ? window : this);

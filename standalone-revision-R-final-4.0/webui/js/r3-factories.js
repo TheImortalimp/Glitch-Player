@@ -259,6 +259,106 @@
                     'IMORTAL', 'RIVER', 'WIRED', 'DEFCON', 'INVERT', 'DIA', 'HUE',
                     'N3ON', 'Z3R0', 'V1RUS', 'C0DEX', 'GL1TCHWAVE'
                 ].forEach(add);
+
+                /* ── Expanded FontBurn universe — all canvas revisions ─────────── */
+                [
+                    /* Ghost in the Shell canon */
+                    'GHOST IN THE SHELL', 'PUBLIC SECURITY', 'SECTION 9', 'ARAMAKI',
+                    'KUSANAGI', 'MOTOKO', 'BATOU', 'TOGUSA', 'ISHIKAWA', 'SAITO',
+                    'BORMA', 'PAZU', 'TACHIKOMA', 'FUCHIKOMA', 'THINK TANK',
+                    'PUPPET MASTER', 'PROJECT 2501', 'LAUGHING MAN', 'STAND ALONE COMPLEX',
+                    'INDIVIDUAL ELEVEN', 'SOLID STATE SOCIETY', 'HANKA ROBOTICS',
+                    'MEGATECH BODY', 'THERMOPTIC CAMO', 'OPTIC CAMO', 'CYBERBRAIN',
+                    'PROSTHETIC BODY', 'GHOST HACK', 'GHOST DUB', 'GHOST BARRIER',
+                    'GHOST COMPONENT', 'GHOST LINE', 'GHOST WHISPER', 'SOUL COPY',
+                    'BODY BANK', 'SHELL UNIT', 'FULL CYBORG', 'BRAIN CASE',
+                    'NET DIVE', 'BARRIER', 'MEMORY PALACE', 'VISUAL CORTEX',
+                    'GHOST WAVE', 'EMPATHIC SYSTEM', 'CYBER SOUL', 'ID TAG',
+                    'PROTO-TYPE', 'CYBERIZATION', 'MEME HAZARD', 'NET VAST', 'INFINITE NET',
+                    /* Neuromancer / Sprawl */
+                    'NEUROMANCER', 'WINTERMUTE', 'MOLLY MILLIONS', 'HENRY CASE',
+                    'DIXIE FLATLINE', 'MAELCUM', 'CORTO', 'RIVIERA', 'FINN',
+                    'ZION CLUSTER', 'RASTAFARI AI', 'CONSOLE COWBOY', 'CYBERSPACE',
+                    'MEATSPACE', 'FLATLINE', 'ICE BREAKER', 'BLACK CLINICS',
+                    'CHIBA CITY', 'THE SPRAWL', 'INTRUSION CM', 'SIMSTIM',
+                    'STRAYLIGHT', 'TURING', 'SCREAMING FIST', 'ARMITAGE',
+                    /* Blade Runner / PKD */
+                    'BLADE RUNNER', 'NEXUS 6', 'TYRELL CORP', 'VOIGT-KAMPFF',
+                    'EMPATHY TEST', 'RACHEL', 'ROY BATTY', 'TEARS IN RAIN',
+                    'ATTACK SHIPS', 'TANNHAUSER GATE', 'ELECTRIC SHEEP',
+                    'ANDROIDS DREAM', 'KIPPLE', 'EMPATHY BOX', 'UBIK', 'VALIS',
+                    /* Visual effects */
+                    'SCANLINE', 'CHROMATIC ABERRATION', 'DATAMOSH', 'DATABEND',
+                    'PIXEL SORT', 'BITCRUSH', 'FEEDBACK LOOP', 'RASTER BURN',
+                    'INTERLACE', 'PHOSPHOR DOT', 'BLOOM GLOW', 'VIGNETTE',
+                    'DITHERING', 'HALFTONE', 'COMPOSITE', 'BLEND MODE',
+                    'FRACTAL NOISE', 'TURBULENCE', 'DISPLACEMENT MAP',
+                    'COLOR MATRIX', 'HUE ROTATE', 'SATURATE', 'TONE MAP',
+                    'HALATION', 'LENS FLARE', 'LIGHT WRAP', 'EDGE GLOW',
+                    'NEON OUTLINE', 'NEON STROKE', 'INNER GLOW', 'OUTER GLOW',
+                    /* Music */
+                    'BREAKCORE', 'JUNGLE DUB', 'DRUM AND BASS', 'NEUROFUNK',
+                    'DARKSTEP', 'TECHSTEP', 'HARDSTEP', 'ROLLERS', 'HALFSTEP',
+                    'DARKSYNTH', 'SYNTHPOP', 'RETROWAVE', 'OUTRUN', 'VAPORWAVE',
+                    'FUTURE FUNK', 'MALLSOFT', 'SLUSHWAVE', 'DREAMWAVE',
+                    'SEWERSLVT', 'GLITCH MOB', 'NEURONIST', 'MEGAMIX VOL 7',
+                    'BREAKBEAT', 'AMEN BREAK', 'REESE BASS', 'TIMESTRETCHED',
+                    'SIDECHAIN', 'REVERB TAIL', 'FEEDBACK RING', 'DRONE ROOT',
+                    /* Glitch Player specific */
+                    'REVISION 4', 'R4 FINAL', 'STANDALONE', 'WEBVIEW2', 'HOST BRIDGE',
+                    'EAR AUTO', 'EAR MONITOR', 'SOFT EYE', 'HARD LIGHT',
+                    'MOONLIGHT VEIL', 'AURORA BLOOM', 'CONFLUENCE', 'VOICE PAIR',
+                    'REALM MIX', 'REALITY RAIL', 'VIRTUAL RAIL', 'WARP ENGINE',
+                    'AI WARP', 'MILKDROP', 'DROP THE MILK', 'GHOST PROTOCOL',
+                    'VSYNC SCAN', 'VSYNC SHARP', 'PRISM RIFT', 'ORBIT HUD',
+                    'SIGNAL TEAR', 'CHROMATIC ECHO', 'TEMPORAL SLICE', 'CYBER RAIN',
+                    'TAPE GRAIN', 'ROLLING SCAN', 'TRACKING TEAR', 'INK GLYPH',
+                    'FONT BURN', 'GEMINI BOMB', 'DATA BOMB', 'MATRIX CHORD',
+                    'ZERO ALL', 'CONTINUAL', 'RANDOMIZE', 'PRESET AUTO',
+                    'BURST GATE', 'CRESCENDO', 'SWELL', 'WILD MODE',
+                    'AESTHETIC BURST', 'B&W SWEEP', 'ANTI-WASHOUT', 'BOARD HARMONY',
+                    /* Cyberpunk extended */
+                    'NETRUNNER', 'CORPO', 'EDGERUNNER', 'RIPPERDOC', 'STREET SAM',
+                    'RAZORGIRL', 'MONOFILAMENT', 'MANTIS BLADE', 'GORILLA ARM',
+                    'NEURAL JACK', 'SANDEVISTAN', 'KERENZIKOV', 'BERSERK',
+                    'QUICKHACK', 'BREACH PROTOCOL', 'ACCESS POINT', 'ICE DAEMON',
+                    'VIRUS PAYLOAD', 'SYSTEM RESET', 'CONTAGION', 'MEMORY WIPE',
+                    'SYNAPSE BURNOUT', 'OVERHEAT', 'CYBERWARE MALFUNCTION',
+                    /* Maths / code */
+                    'ALEPH NULL', 'OMEGA POINT', 'MANDELBROT', 'JULIA SET',
+                    'CANTOR DUST', 'STRANGE ATTRACTOR', 'PHASE SPACE', 'BIFURCATION',
+                    'LIMIT CYCLE', 'LYAPUNOV', 'FOURIER', 'LAPLACE', 'EULER',
+                    'LAMBDA', 'RECURSION', 'ITERATION', 'CONVERGENCE', 'DIVERGENCE',
+                    'EIGENVECTOR', 'JACOBIAN', 'GRADIENT DESCENT', 'SOFTMAX',
+                    'ATTENTION HEAD', 'TRANSFORMER', 'LATENT SPACE', 'DIFFUSION',
+                    /* Colour / light */
+                    'ULTRAVIOLET', 'INFRARED', 'BIOLUMINESCENT', 'INCANDESCENT',
+                    'FLUORESCENT', 'IRIDESCENT', 'REFRACTION', 'DIFFRACTION',
+                    'CAUSTIC', 'CREPUSCULAR', 'NACREOUS', 'AUREOLE', 'NIMBUS',
+                    'SPECTRAL LINE', 'POLYCHROME', 'HDR PEAK', 'WIDE GAMUT',
+                    'LINEAR LIGHT', 'GAMMA CORRECT', 'TONE MAP', 'EXPOSURE',
+                    /* Machine / system */
+                    'RUNTIME', 'KERNEL', 'DAEMON', 'INTERRUPT', 'PAGEFAULT',
+                    'SEGFAULT', 'CORE DUMP', 'HEAP SPRAY', 'STACK TRACE',
+                    'JIT COMPILE', 'AOT COMPILE', 'BYTECODE', 'OPCODE',
+                    'CACHE LINE', 'TLB MISS', 'BRANCH MISS', 'PIPELINE STALL',
+                    'SPECTRE BUG', 'MELTDOWN', 'ROWHAMMER', 'COLD BOOT',
+                    'HYPERVISOR', 'ENCLAVE', 'SYSCALL', 'SIGNAL HANDLER', 'FAULT',
+                    /* Emotional / liminal */
+                    'LIMINAL SPACE', 'LOFI STUDY', 'AMBIENT DRONE', 'DREAMSCAPE',
+                    'NOSTALGIA TRAP', 'STATIC HISS', 'WHITE NOISE', 'DEAD CHANNEL',
+                    'LOST SIGNAL', 'GHOST CARRIER', 'GHOST FREQUENCY', 'REMNANT',
+                    'RESIDUE', 'AFTERIMAGE', 'ECHO CHAMBER', 'SILENCE',
+                    'VOID SPACE', 'EMPTY FRAME', 'FADE OUT', 'CROSS FADE',
+                    'INFINITE LOOP', 'LAST TRANSMISSION', 'FINAL SIGNAL', 'END OF LINE',
+                    /* Leet extended */
+                    'GH0ST', 'N3T', 'W1R3D', 'H4CK', 'R3V1S10N', '4UR0R4',
+                    'M00NL1GHT', 'D4T4', 'S1GN4L', 'V01D', 'PR1SM', 'FL1CK3R',
+                    'SC4NL1N3', 'M4TR1X', 'C0D3X', 'PH0SPH0R', '5TR0B3',
+                    'SYN7H', 'W4V3', 'PH4NT0M', 'SP3CTR3', '4N0M4LY',
+                    'S1NGU14R1TY', '3NTR0PY', '3CH0', 'D43M0N', 'ST4CKTRACE',
+                    'BUFF3R', '0V3RFL0W', '0FF BY 0N3', 'D34DL0CK'
+                ].forEach(add);
                 const A = ['GHOST', 'SHELL', 'DIGITAL', 'REBIRTH', 'FEAR', 'DOT', 'COMMA', 'MAJOR', 'NET', 'SOUL'];
                 const B = ['SHELL', 'HACK', 'DIVE', 'COPY', 'CAMO', 'WAVE', 'KEY', 'CODE', 'BORN', 'COMMA'];
                 for (let i = 0; i < A.length; i++) {
@@ -2658,7 +2758,7 @@
             darkness: clamp01(p.darkness == null ? 1 - brightness : p.darkness)
         };
         comboProfile = { glowMult: 0.9 + videoPalette.energy * 0.25, satMult: 1, contrastMult: 1 };
-        SOFT.k = clamp01((engine.softEyeK == null ? 1 : engine.softEyeK || 1) * blend.softEye);
+        SOFT.k = clamp01((engine.softEyeK == null ? 1 : (Number.isFinite(engine.softEyeK) ? engine.softEyeK : 1)) * blend.softEye);
         SOFT.beat = clamp01(((engine.audioDrive || {}).beat || 0) * blend.ear);
         beat = SOFT.beat;
         hueCycleRaw = clamp01(engine.effectAlphas['Hue/Color Cycle' + GC3_SUFFIX] || 0);
