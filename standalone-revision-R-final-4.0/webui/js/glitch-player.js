@@ -480,8 +480,10 @@
           /* 'global' is seeded so saved global-opacity locks survive preset
              normalization (which keeps only known lock keys). 'glyphBank' is
              the Phase 1 glyph-table hard lock (presets, preset auto,
-             Randomize All, Random Seed and Glyph Auto all respect it). */
-          const sliderLocks = { global: false, glyphBank: false };
+             Randomize All, Random Seed and Glyph Auto all respect it).
+             'hardLight' holds the Hard Light toggle against presets (the
+             dedicated lock button arrives with first-class state in Phase 6). */
+          const sliderLocks = { global: false, glyphBank: false, hardLight: false };
           /* Locks switched on by the last applied preset. Those are released by
              the next preset; locks the user set by hand are hard and survive. */
           const presetLockKeys = new Set();
@@ -9307,6 +9309,11 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                           const profile = blendProfiles[name];
                           const v = profile ? randRange(profile.ambient) : 0.05 + Math.random() * 0.12;
                           effectAlphas[name] = v;
+                          /* Phase 2: wake the voice for real — clear cancellation
+                             and the parked snapshot so Continual Randomization
+                             doesn't immediately re-zero it after a ZERO ALL. */
+                          crParked[name] = false;
+                          setEffectCancelled(name, false);
                           if (sliderElements[name]) sliderElements[name].value = v.toFixed(3);
                       }
                       if (!sliderLocks.global) {
@@ -9378,110 +9385,14 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
           }
 
           /* ================================================================ *
-           *  MACHINE PRESET MEMORY — 80 Deepseek presets, ROLLED FRESH on    *
-           *  every page load / refresh. Names mint from the Font Burn Codex  *
-           *  (BURN_WORDS) plus HTML ids / title / JS effect names, with a    *
-           *  light 1337 encoding. Values, Ghost, V-Sync, Warp and automation *
-           *  are random each boot. Deepseek-1 always keeps a quiet 'OLD SOUL'*
-           *  seed so the board still has a known home.                       *
+           *  MACHINE PRESET MEMORY — 80 Deepseek presets. The single         *
+           *  canonical 43-voice generator lives in                           *
+           *  GlitchEngine.buildMachinePresets (glyphBank, voiceFx, hardLight *
+           *  and milk are populated for every preset, so MACHINE never       *
+           *  inherits stale LAB state). The thin wrapper below records the   *
+           *  deck seed so any 80-preset deck is replayable from one 32-bit   *
+           *  seed. Deepseek-1 always keeps a quiet 'OLD SOUL' anchor.      *
            * ================================================================ */
-          function mulberry32(a) {
-              return function() {
-                  let t = a += 0x6D2B79F5;
-                  t = Math.imul(t ^ t >>> 15, t | 1);
-                  t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-                  return ((t ^ t >>> 14) >>> 0) / 4294967296;
-              };
-          }
-          function leetEncodeWord(word) {
-              return String(word).toUpperCase()
-                  .replace(/A/g, '4').replace(/E/g, '3').replace(/I/g, '1')
-                  .replace(/O/g, '0').replace(/S/g, '5');
-          }
-          /* Frozen 4.0 baseline: live DOM ids and the title are not read, so new
-             markup (such as ghostLink) cannot reshuffle the 80 MACHINE names. */
-          const MACHINE_NAME_DOM_IDS = [
-              'windowDrag', 'windowControls', 'windowShield', 'windowResize', 'welcomeScreen', 'welcomeAudioTypes',
-              'welcomeVideoTypes', 'welcomeEnterBtn', 'moon-veil', 'rev3-mark', 'effects-wrapper', 'localArt',
-              'video', 'localAudio', 'ytWarpShell', 'ytFrame', 'ytPlayerMount', 'glitchCanvas',
-              'wired-btn', 'nowPlayingHud', 'npHudToggle', 'npHudPanel', 'npThumb', 'npTitle',
-              'npAuthor', 'npProvider', 'npTime', 'npFlags', 'npLink', 'earHud',
-              'earHudMode', 'earHudPhase', 'earMeterLevel', 'earMeterBass', 'earMeterMid', 'earMeterTreb',
-              'earMeterBuild', 'earHudSrc', 'rightRack', 'autoGlitchBtn', 'randomizeBtn', 'continualRandomizeBtn',
-              'aiWarpBtn', 'automatedMastersBtn', 'zeroAllBtn', 'ghostBtnRack', 'ghostProtocolBtn', 'vsyncScanBtn',
-              'softEyeBtn', 'hardLightBtn', 'earBtn', 'freezeFrameBtn', 'sliderContainer', 'ghostProtocolSlider',
-              'vsyncScanLabel', 'vsyncScanSlider', 'vsyncLockBtn', 'randomSeedSlider', 'sourceScreen', 'sourceHeading',
-              'sourceHint', 'ytInput', 'startBtn', 'ytLinkTreeHeading', 'ytLinkTree', 'suggestedVideo',
-              'suggestedVideo3', 'suggestedVideo2', 'suggestedYoutube', 'suggestedPlaylist', 'suggestedMoonlight', 'suggestedFractals',
-              'suggestedNightCity', 'testCanvas', 'suggestedDarksynth', 'Defcon1Video', 'openFileWrap', 'openFileBtn',
-              'fileInput', 'preset-toggle-btn', 'preset-dropdown-container', 'presetCloseZone', 'glyph-bank', 'glyph-info',
-              'current-preset-display', 'presetSelect', 'presetListToggleBtn', 'presetLabBtn', 'presetAutoBtn', 'presetNameInput',
-              'presetSaveBtn', 'presetDeleteBtn', 'presetDeleteAllBtn', 'presetImportBtn', 'presetExportBtn', 'presetImportInput',
-              'presetPrevBtn', 'presetNextBtn', 'ui-toggle-tab', 'toggle-ui-btn', 'ai-warp-filter', 'ai-turbulence',
-              'ai-displacement', 'ai-color-matrix', 'vsync-hue-ghost-filter', 'vsync-ghost-hue', 'vsync-ghost-saturate', 'vsync-ghost-sharpen'
-          ];
-          const MACHINE_NAME_TITLE = 'Standalone Revision R Final 4.1 \u2014 Glitch Canvas';
-          function harvestNameCodex() {
-              const bag = [];
-              const add = (s) => {
-                  if (!s) return;
-                  String(s).split(/[^A-Za-z0-9]+/).forEach((p) => {
-                      if (p.length >= 3 && p.length <= 16) bag.push(p.toUpperCase());
-                  });
-              };
-              if (typeof GHOST_KEY_PHRASES !== 'undefined') GHOST_KEY_PHRASES.forEach(add);
-              if (typeof GHOST_KEY_STANZAS !== 'undefined') GHOST_KEY_STANZAS.forEach(add);
-              if (typeof BURN_WORDS !== 'undefined') BURN_WORDS.forEach(add);
-              profileNames.forEach(add);
-              ['RIVER', 'GLITCH', 'CANVAS', 'DEEPSEEK', 'WIRED', 'DEFCON', 'GHOST',
-                  'VSYNC', 'WARP', 'FADE', 'WHITE', 'BLACK', 'PROTOCOL', 'MACHINE',
-                  'PRESET', 'SPECTRUM', 'PLASMA', 'CRT', 'INVERT', 'EMISSION', 'DIA',
-                  'HUE', 'LOOP', 'CODEX', 'FONTBURN', '006', 'IMORTAL', 'REVISION',
-                  'NEON', 'PHOSPHOR', 'PRISM', 'VOID', 'SIGNAL', 'TAPE', 'AURORA',
-                  'MATRIX', 'CHORD', 'TYPESET', 'KATAKANA', 'CYRILLIC', 'HANZI', 'RAIN'
-              ].forEach(add);
-              MACHINE_NAME_DOM_IDS.forEach(add);
-              add(MACHINE_NAME_TITLE);
-              const seen = Object.create(null);
-              const out = [];
-              for (let i = 0; i < bag.length; i++) {
-                  if (!seen[bag[i]]) { seen[bag[i]] = 1; out.push(bag[i]); }
-              }
-              return out;
-          }
-          function mintPresetTag(rng, codex, used) {
-              const pick = () => codex[(rng() * codex.length) | 0] || 'SIGNAL';
-              for (let n = 0; n < 24; n++) {
-                  const a = pick(), b = pick();
-                  const forms = [
-                      a + ' ' + b,
-                      leetEncodeWord(a) + ' ' + b,
-                      a + '-' + b,
-                      '006 ' + a,
-                      a + ' ' + leetEncodeWord(b),
-                      b + ' ' + a,
-                      a + ' CODEX',
-                      'DIA ' + a,
-                      'GHOST ' + a,
-                      a + ' SHELL',
-                      'REBIRTH ' + b,
-                      'f34R ' + a
-                  ];
-                  let tag = forms[(rng() * forms.length) | 0];
-                  if (tag.length > 28) tag = (a + ' ' + b).slice(0, 28);
-                  if (!used[tag] && a !== b) { used[tag] = 1; return tag; }
-              }
-              const fallback = 'SEED ' + ((rng() * 0xFFFF) | 0).toString(16).toUpperCase();
-              used[fallback] = 1;
-              return fallback;
-          }
-          function randBwLevel(rng) {
-              const roll = rng();
-              if (roll < 0.22) return 0;
-              if (roll < 0.48) return 0.50;
-              if (roll < 0.82) return 0.75; /* negative light emission landmark */
-              return 1.0;
-          }
           /* A new seed on every start and Refresh, so the MACHINE bank is different each session. */
           function freshMachineSeed() {
               try {
@@ -9491,135 +9402,33 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               } catch (e) { /* fall through to the key seed */ }
               return ((typeof GHOST_KEY_SEED === 'number' ? GHOST_KEY_SEED : 0xF34D07) >>> 0) || 1;
           }
-          /* Keeps generated light calm and coherent: Flash/Strobe stay under their caps
-             and never peak together; one lead voice carries the colour. */
-          function balanceMachineLight(alphas, rng) {
-              alphas['Flash'] = +Math.min(alphas['Flash'] || 0, LIGHT_CEILING.Flash * (0.35 + rng() * 0.65)).toFixed(3);
-              alphas['Strobe'] = +Math.min(alphas['Strobe'] || 0, LIGHT_CEILING.Strobe * (0.35 + rng() * 0.65)).toFixed(3);
-              if (alphas['Flash'] > 0.5 * LIGHT_CEILING.Flash && alphas['Strobe'] > 0.5 * LIGHT_CEILING.Strobe) {
-                  alphas[rng() < 0.5 ? 'Flash' : 'Strobe'] = 0;
-              }
-          }
+          /* R4.1.3 PRESET DETERMINATION: the deck is fully determined by one
+             seed — pass it back in to rebuild the exact same 80 presets.
+             Without an override every start and Refresh rolls fresh. */
           function buildMachinePresets(seedOverride) {
-              const FX = ['ASCII', 'B&W Invert', 'Data Bands', 'Data Bomb', 'Flash', 'Font Burn',
-                  'Gemini Bomb', 'HSL Rainbow', 'Hue/Color Cycle', 'Ink Glyphs', 'Matrix ASCII', 'Matrix Chord',
-                  'Neon Grad', 'Scanlines', 'Strobe', 'Tech Artist', 'VHS Glitch'
-              ];
-              const GHOST_MODES = (window.GlitchEngine && GlitchEngine.GHOST_MODES)
-                  ? GlitchEngine.GHOST_MODES.slice()
-                  : ['OFF', 'DIA', 'SPECTRUM', 'CRT', 'PLASMA', 'LED'];
-              const VSYNC_MODES = ['OFF', 'ON', 'GHOST_OFF', 'FULL'];
-              /* R4.1.3 PRESET DETERMINATION: the deck is fully determined by one
-                 seed — pass it back in to rebuild the exact same 80 presets.
-                 Without an override every start and Refresh rolls fresh. */
               const seed = (seedOverride >>> 0) || freshMachineSeed();
               buildMachinePresets.lastSeed = seed;
               try { console.info('[MACHINE] deck seed ' + seed + ' — reproducible via buildMachinePresets(seed)'); } catch (e) {}
-              const rng = mulberry32(seed);
-              const codex = harvestNameCodex();
-              const usedTags = Object.create(null);
-              const DEFAULT_MASTERS = {
-                  effectIntensity: 0.88, motionScale: 0.80, blendSoftness: 0.50,
-                  continualSpeed: 0.85, autoGlitchPower: 0.75, boardEnergy: 0.65
-              };
-              const out = {};
-              for (let i = 0; i < 80; i++) {
-                  const name = 'Deepseek-' + (i + 1);
-                  const tag = (i === 0) ? 'OLD SOUL' : mintPresetTag(rng, codex, usedTags);
-                  const personality = rng();
-                  const alphas = {};
-                  FX.forEach((fx) => { alphas[fx] = 0; });
-                  if (i === 0) {
-                      alphas['Neon Grad'] = 0.20; alphas['Scanlines'] = 0.16;
-                      alphas['Flash'] = 0.32; alphas['HSL Rainbow'] = 0.24;
-                      alphas['ASCII'] = 0.28; alphas['Font Burn'] = 0.40;
-                      alphas['Strobe'] = 0.40; alphas['Gemini Bomb'] = 0.36;
-                      alphas['Tech Artist'] = 0.20; alphas['B&W Invert'] = 0;
-                  } else {
-                      const voiceCount = 2 + ((rng() * (personality > 0.78 ? 10 : 6)) | 0);
-                      const shuffled = FX.slice().sort(() => rng() - 0.5);
-                      for (let v = 0; v < voiceCount; v++) {
-                          const fx = shuffled[v];
-                          if (fx === 'B&W Invert') alphas[fx] = randBwLevel(rng);
-                          else alphas[fx] = +((0.08 + rng() * 0.84) * (personality > 0.55 ? 1 : 0.7)).toFixed(3);
-                      }
-                      if (rng() < 0.45) alphas['B&W Invert'] = randBwLevel(rng);
-                  }
-                  const gm = (i === 0) ? 'OFF' : GHOST_MODES[(rng() * GHOST_MODES.length) | 0];
-                  if (i !== 0) balanceMachineLight(alphas, rng);
-                  if (i !== 0) {
-                      const gp = (window.GlitchEngine && GlitchEngine.ghostProfile)
-                          ? GlitchEngine.ghostProfile(gm) : { realm: 'mix' };
-                      const chroma = ['Hue/Color Cycle', 'HSL Rainbow', 'Neon Grad'];
-                      let lead = null;
-                      chroma.forEach((fx) => {
-                          if (!(alphas[fx] > 0.04)) return;
-                          if (gp.realm === 'reality') alphas[fx] = Math.min(alphas[fx], 0.48);
-                          if (gp.realm === 'virtual') alphas[fx] = Math.max(alphas[fx], 0.22);
-                          if (lead == null) lead = alphas[fx];
-                          else alphas[fx] = +((alphas[fx] * 0.42 + lead * 0.58).toFixed(3));
-                      });
-                      if (lead != null && rng() < 0.55) {
-                          chroma.forEach((fx) => {
-                              if (!(alphas[fx] > 0.04)) {
-                                  alphas[fx] = +(Math.max(0.08, lead * (0.55 + rng() * 0.35)).toFixed(3));
-                              }
-                          });
-                      }
-                  }
-                  const vm = (i === 0) ? 'OFF' : VSYNC_MODES[(rng() * VSYNC_MODES.length) | 0];
-                  const gl = gm === 'OFF' ? 0 : +(0.2 + rng() * 0.75).toFixed(3);
-                  const vl = vm === 'OFF' ? 0 : +(0.25 + rng() * 0.7).toFixed(3);
-                  const warp = i !== 0 && rng() < 0.22 ? 1 : 0;
-                  const ag = i !== 0 && rng() < 0.32 ? 1 : 0;
-                  const cr = i === 0 ? 0 : (rng() < 0.55 ? 1 : 0);
-                  const am = i !== 0 && rng() < 0.28 ? 1 : 0;
-                  const lockMap = {};
-                  if (i !== 0 && rng() < 0.18) {
-                      const lk = FX[(rng() * FX.length) | 0];
-                      if (alphas[lk] > 0.15) lockMap[lk] = true;
-                  }
-                  const masterMix = Object.assign({}, DEFAULT_MASTERS);
-                  if (i !== 0) {
-                      masterMix.effectIntensity = +(0.55 + rng() * 0.45).toFixed(3);
-                      masterMix.motionScale = +(0.45 + rng() * 0.55).toFixed(3);
-                      masterMix.blendSoftness = +(0.25 + rng() * 0.7).toFixed(3);
-                      masterMix.continualSpeed = +(0.4 + rng() * 0.6).toFixed(3);
-                      masterMix.autoGlitchPower = +(0.4 + rng() * 0.6).toFixed(3);
-                      masterMix.boardEnergy = +(0.35 + rng() * 0.65).toFixed(3);
-                  }
-                  out[name] = {
-                      machine: true,
-                      tag: tag,
-                      seed: seed,
-                      alphas: alphas,
-                      masterOpacity: i === 0 ? 0.92 : +(0.62 + rng() * 0.38).toFixed(3),
-                      ghostLevel: gl,
-                      ghostMode: gm,
-                      vsyncMode: vm,
-                      aiWarp: !!warp,
-                      vsyncLevels: {
-                          ON: vm === 'ON' ? vl : 0.55,
-                          GHOST_OFF: vm === 'GHOST_OFF' ? vl : 0.6,
-                          FULL: vm === 'FULL' ? vl : 0.65
-                      },
-                      masterControls: masterMix,
-                      locks: lockMap,
-                      toggles: {
-                          autoGlitch: !!ag,
-                          continualRandomize: !!cr,
-                          aiWarp: !!warp,
-                          automatedMasters: !!am
-                      }
-                  };
+              const eng = window.GlitchEngine;
+              if (!eng || typeof eng.buildMachinePresets !== 'function') {
+                  throw new Error('GlitchEngine.buildMachinePresets is required to mint the MACHINE bank.');
               }
-              return out;
+              return eng.buildMachinePresets(seed);
           }
           const LAB_EFFECT_ALIASES = Object.freeze({
               'Scanlines': 'Rolling Scan',
               'Data Bands': 'Tape Grain',
               'VHS Glitch': 'Tracking Tear'
           });
+          /* Clean defaults seated into every LAB snapshot for fields the LAB
+             250 bank omits (cross-bank hygiene — see mapLabSnapshot). bwInvert
+             is a strength multiplier, so 1 is its neutral value. */
+          const LAB_CLEAN_MASTERS = Object.freeze({
+              effectIntensity: 0.88, motionScale: 0.80, blendSoftness: 0.50,
+              continualSpeed: 0.85, autoGlitchPower: 0.75, boardEnergy: 0.65
+          });
+          const LAB_CLEAN_VOICE_FX = Object.freeze({ bwInvert: 1, hueOffset: 0 });
+          const LAB_CLEAN_MILK = Object.freeze({ active: false });
 
           function normalizePresetSettings(settings) {
               if (!isPlainRecord(settings)) return null;
@@ -9662,9 +9471,23 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                   if (Number.isFinite(rawVoiceFx.hueOffset)) vf.hueOffset = normalizeHueOffset(rawVoiceFx.hueOffset);
                   if (Object.keys(vf).length) voiceFx = Object.freeze(vf);
               }
+              /* Schema v4 optional fields (backward compatible with v3): Hard
+                 Light, Milkdrop, Glyph Auto and the replayable deck seed. */
+              let milkFx;
+              if (isPlainRecord(settings.milk) && typeof settings.milk.active === 'boolean') {
+                  const m = { active: settings.milk.active };
+                  if (Number.isInteger(settings.milk.presetId) &&
+                      settings.milk.presetId >= 1 && settings.milk.presetId <= 80) m.presetId = settings.milk.presetId;
+                  if (Number.isFinite(settings.milk.opacity)) m.opacity = clamp01(settings.milk.opacity);
+                  milkFx = Object.freeze(m);
+              }
               return {
                   alphas,
                   voiceFx,
+                  hardLight: typeof settings.hardLight === 'boolean' ? settings.hardLight : undefined,
+                  milk: milkFx,
+                  glyphAuto: typeof settings.glyphAuto === 'boolean' ? settings.glyphAuto : undefined,
+                  seed: Number.isInteger(settings.seed) ? settings.seed : undefined,
                   masterOpacity: Number.isFinite(settings.masterOpacity) ? clamp01(settings.masterOpacity) : masterOpacity,
                   ghostLevel: Number.isFinite(settings.ghostLevel) ? clamp01(settings.ghostLevel) : undefined,
                   ghostMode: typeof settings.ghostMode === 'string' ? settings.ghostMode : undefined,
@@ -9701,6 +9524,23 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                   }
               });
               normalized.alphas = alphas;
+              /* Phase 2 cross-bank hygiene: LAB 250 omits Ghost, V-Sync, the
+                 masters, the AI WARP masters, Hard Light and Milkdrop — seat
+                 explicit clean defaults so MACHINE → LAB → MACHINE cycling
+                 (manual or preset auto) leaks zero state across banks. The
+                 glyphBank itself is resolved through the SignalGlyphs
+                 renderable fallback at apply time (fallbackRenderable). */
+              if (normalized.ghostMode === undefined) normalized.ghostMode = 'OFF';
+              if (normalized.ghostLevel === undefined) normalized.ghostLevel = 0;
+              if (normalized.vsyncMode === undefined) normalized.vsyncMode = 'OFF';
+              MASTER_KEYS.forEach((key) => {
+                  if (normalized.masterControls[key] === undefined) {
+                      normalized.masterControls[key] = LAB_CLEAN_MASTERS[key];
+                  }
+              });
+              if (!normalized.voiceFx) normalized.voiceFx = LAB_CLEAN_VOICE_FX;
+              if (normalized.hardLight === undefined) normalized.hardLight = false;
+              if (normalized.milk === undefined) normalized.milk = LAB_CLEAN_MILK;
               return Object.freeze(normalized);
           }
 
@@ -9725,8 +9565,23 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
              it, and saving always writes a USER preset. Deepseek-1 (OLD SOUL) keeps its
              3.0 values; every light is capped when applied. */
           const machinePresets = Object.create(null);
-          (function buildDeepseekBank() {
-              const raw = buildMachinePresets();
+          /* R4.3.1 Phase 2: the deck seed persists across reloads so the same
+             MACHINE deck returns, and any 32-bit seed can be replayed through
+             the #machineSeedInput / Re-roll controls. */
+          const MACHINE_SEED_KEY = 'glitchMachineDeckSeed_v1';
+          function loadStoredMachineSeed() {
+              try {
+                  const raw = localStorage.getItem(MACHINE_SEED_KEY);
+                  if (raw === null) return 0;
+                  const n = Number(raw);
+                  return (Number.isInteger(n) && n > 0 && n <= 0xFFFFFFFF) ? (n >>> 0) : 0;
+              } catch (e) { return 0; }
+          }
+          function storeMachineSeed(seed) {
+              try { localStorage.setItem(MACHINE_SEED_KEY, String(seed >>> 0)); } catch (e) {}
+          }
+          function seatMachineBank(raw) {
+              Object.keys(machinePresets).forEach((name) => { delete machinePresets[name]; });
               Object.keys(raw).forEach((name) => {
                   const entry = raw[name];
                   const settings = normalizePresetSettings(entry);
@@ -9736,6 +9591,19 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                       settings: settings
                   };
               });
+          }
+          /* Rebuilds the 80-preset MACHINE deck. Pass a 32-bit seed to replay
+             that exact deck; pass 0/undefined for a fresh roll. */
+          function rebuildMachineBank(customSeed) {
+              seatMachineBank(buildMachinePresets(customSeed));
+              storeMachineSeed(buildMachinePresets.lastSeed);
+              if (typeof syncMachineSeedUi === 'function') syncMachineSeedUi();
+              if (presetListMode === 'machine') refreshPresetList();
+              return buildMachinePresets.lastSeed;
+          }
+          (function buildDeepseekBank() {
+              seatMachineBank(buildMachinePresets(loadStoredMachineSeed()));
+              storeMachineSeed(buildMachinePresets.lastSeed);
           })();
           const PRESET_LISTS = Object.freeze(['user', 'machine', 'lab']);
           const PRESET_LIST_LABELS = Object.freeze({ user: 'USER', machine: 'MACHINE', lab: 'LAB 250' });
@@ -9774,6 +9642,16 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                   vsyncLevels,
                   masterControls: { ...masterControls },
                   voiceFx: { bwInvert: voiceFxSettings.bwInvert, hueOffset: voiceFxSettings.hueOffset },
+                  /* Schema v4 optional round-trips: Hard Light is still the
+                     bindHardLight session toggle (first-class state is Phase 6),
+                     so its current value is read from the body class. */
+                  hardLight: document.body.classList.contains('hard-light'),
+                  glyphAuto: glyphAutoActive,
+                  milk: (() => {
+                      const m = { active: milk.active, opacity: clamp01(milk.target) };
+                      if (milk.preset && Number.isInteger(milk.preset.id)) m.presetId = milk.preset.id;
+                      return m;
+                  })(),
                   toggles: {
                       autoGlitch: isAutoGlitching,
                       continualRandomize: isContinuallyRandomizing,
@@ -9951,6 +9829,27 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               }
               if (s.glyphBank && window.SignalGlyphs && !glyphBankHeld) {
                   window.SignalGlyphs.set(s.glyphBank, { fallbackRenderable: true });
+              }
+              /* Phase 2: Hard Light / Milkdrop / Glyph Auto round-trips. Hard
+                 Light is still the bindHardLight session toggle (first-class
+                 state is Phase 6), so presets drive it through its button. */
+              if (typeof s.hardLight === 'boolean' && !sliderLocks.hardLight) {
+                  const hlBtn = $('hardLightBtn');
+                  if (hlBtn && document.body.classList.contains('hard-light') !== s.hardLight) hlBtn.click();
+              }
+              if (s.milk && typeof s.milk.active === 'boolean') {
+                  if (milk.active !== s.milk.active) setMilkActive(s.milk.active);
+                  if (s.milk.active) {
+                      if (Number.isInteger(s.milk.presetId) && milk.deck.length) {
+                          const at = milk.deck.findIndex((p) => p.id === s.milk.presetId);
+                          if (at > 0) milk.deck.unshift(milk.deck.splice(at, 1)[0]);
+                      }
+                      if (Number.isFinite(s.milk.opacity) && !voiceFxLocks.milkOpacity) setMilkOpacity(s.milk.opacity);
+                  }
+              }
+              if (typeof s.glyphAuto === 'boolean' && !sliderLocks.glyphBank) {
+                  glyphAutoActive = s.glyphAuto;
+                  glyphAutoNextAt = glyphAutoActive ? performance.now() + 1200 : 0;
               }
               if (s.toggles) {
                   if (s.toggles.autoGlitch !== undefined) {
@@ -10188,6 +10087,50 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                   setPresetListMode('lab');
               });
           }
+
+          /* Phase 2: MACHINE deck seed controls — the 80 Deepseek presets are
+             fully determined by one 32-bit seed. Copy shares the current deck;
+             pasting a seed and pressing Re-roll replays that exact deck; an
+             unchanged field re-rolls fresh. The seed persists in localStorage
+             so the same deck returns on reload. */
+          const machineSeedInput = $('machineSeedInput');
+          const machineSeedCopyBtn = $('machineSeedCopyBtn');
+          const machineSeedRollBtn = $('machineSeedRollBtn');
+          function syncMachineSeedUi() {
+              if (machineSeedInput) machineSeedInput.value = String(buildMachinePresets.lastSeed >>> 0);
+          }
+          function parseMachineSeedInput() {
+              if (!machineSeedInput) return 0;
+              const n = Number(String(machineSeedInput.value).trim());
+              return (Number.isInteger(n) && n > 0 && n <= 0xFFFFFFFF) ? (n >>> 0) : 0;
+          }
+          if (machineSeedCopyBtn) {
+              machineSeedCopyBtn.addEventListener('click', function(e) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  /* Static policy forbids clipboard sinks — selecting the seed
+                     keeps the copy one native Ctrl+C away. */
+                  syncMachineSeedUi();
+                  if (machineSeedInput) {
+                      machineSeedInput.focus();
+                      machineSeedInput.select();
+                  }
+                  showNotificationMessage('MACHINE DECK SEED ' + (buildMachinePresets.lastSeed >>> 0) +
+                      ' SELECTED — press Ctrl+C to copy', 2600);
+              });
+          }
+          if (machineSeedRollBtn) {
+              machineSeedRollBtn.addEventListener('click', function(e) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const typed = parseMachineSeedInput();
+                  const current = buildMachinePresets.lastSeed >>> 0;
+                  const seed = rebuildMachineBank(typed && typed !== current ? typed : 0);
+                  showNotificationMessage('MACHINE DECK ' + (typed && typed === seed ?
+                      'REPLAYED FROM SEED ' : 'RE-ROLLED — SEED ') + seed, 2600);
+              });
+          }
+          syncMachineSeedUi();
 
           /* v11: " -ʁ%AUTO%ʁ- " — auto-cycler. While ON, a random preset is
              picked from EITHER memory list every 9.5–19.5 seconds (3.8–6.6 inside a crescendo); if the pick

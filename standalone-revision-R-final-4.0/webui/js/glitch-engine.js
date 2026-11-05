@@ -1071,6 +1071,22 @@
         var seed = hashSeed(rawSeed);
         var rng  = mulberry32(seed);
         var usedTags = Object.create(null);
+        /* The replayable 32-bit deck seed recorded on every preset. */
+        var deckSeed = (Number.isInteger(rawSeed) && rawSeed > 0 && rawSeed <= 0xFFFFFFFF) ? (rawSeed >>> 0) : seed;
+
+        /* Glyph pool: the font-probed renderable tables when SignalGlyphs is
+           live (browser/WebView2); a pinned widely-fonted fallback in headless
+           Node tests where the canvas probe is stubbed. */
+        var GLYPH_FALLBACK = [
+            'ASCII (printable)', 'Latin-1 Supplement', 'Greek', 'Cyrillic',
+            'Hebrew', 'Arabic', 'Devanagari', 'Thai', 'Katakana', 'Hiragana',
+            'Hangul Syllables', 'CJK Unified Ideographs', 'Box Drawing',
+            'Geometric Shapes', 'Mathematical Operators', 'IBM PC CP437 graphics'
+        ];
+        var sg = root.SignalGlyphs;
+        var glyphPool = (sg && Array.isArray(sg.renderableNames) && sg.renderableNames.length)
+            ? sg.renderableNames
+            : GLYPH_FALLBACK;
 
         var DEFAULT_MASTERS = {
             effectIntensity: 0.85, motionScale: 0.80, blendSoftness: 0.50,
@@ -1113,9 +1129,10 @@
                 alphas['Tech Artist']  = 0.18;
                 alphas['VHS Glitch']   = 0.18;
                 alphas['Data Bands']   = 0.12;
-                /* Flash/Strobe strictly at ceiling */
-                alphas['Flash']        = 0.20;
-                alphas['Strobe']       = 0.35;
+                /* OLD SOUL obeys LIGHT_CEILING in memory and never peaks both
+                   lights together (calm [0.12, 0.30] pairing). */
+                alphas['Flash']        = 0.12;
+                alphas['Strobe']       = 0.30;
             } else {
                 selected.forEach(function (v) {
                     var isLight = v === 'Flash' || v === 'Strobe';
@@ -1132,6 +1149,11 @@
                         alphas[v] = +(lo + rng() * (hi - lo)).toFixed(3);
                     }
                 });
+                /* Balance the capped lights: never let both sit high together. */
+                if (alphas['Flash'] > 0.5 * LIGHT_CEILING['Flash'] &&
+                    alphas['Strobe'] > 0.5 * LIGHT_CEILING['Strobe']) {
+                    alphas[rng() < 0.5 ? 'Flash' : 'Strobe'] = 0;
+                }
             }
 
             /* ── AI Warp ─────────────────────────────────────────────────────── */
@@ -1151,17 +1173,34 @@
             var am      = i !== 0 && rng() < 0.25;
             var softEye = i !== 0 && rng() < 0.20 ? (rng() < 0.5 ? 'SURGE' : 'CRESCENDO') : 'OFF';
 
-            /* ── Per-preset glyph bank (every MACHINE preset defines one — no state bleed) */
-            var GLYPH_BANKS = [
-                'Engine realms (Revision 3)', 'All scripts',
-                'latin', 'katakana', 'cyrillic', 'greek', 'hebrew', 'arabic',
-                'devanagari', 'thai', 'hangul', 'hanzi', 'javanese', 'symbols',
-                'superscript', 'mathoperator', 'ghostkey'
-            ];
+            /* ── Per-preset glyph bank (every MACHINE preset defines one — no
+                  state bleed). Deterministic rng pick: 20% Engine realms,
+                  10% All scripts, 70% a specific renderable script table. */
             var gbRoll = rng();
             var glyphBank = gbRoll < 0.20 ? 'Engine realms (Revision 3)'
                          : gbRoll < 0.30 ? 'All scripts'
-                         : GLYPH_BANKS[2 + ((rng() * (GLYPH_BANKS.length - 2)) | 0)];
+                         : glyphPool[Math.min(glyphPool.length - 1, (rng() * glyphPool.length) | 0)];
+
+            /* ── AI WARP masters: B&W Strength + Hue Offset, rolled per preset
+                  so MACHINE never inherits the previous board's warp masters. */
+            var voiceFx = (i === 0)
+                ? { bwInvert: 1, hueOffset: 0 }
+                : {
+                    bwInvert: +Math.min(1, Math.max(0.12,
+                        [0.5, 0.75, 0.75, 1][(rng() * 4) | 0] + (rng() - 0.5) * 0.12)).toFixed(2),
+                    hueOffset: (rng() * 360) | 0
+                };
+
+            /* ── DROP THE MILK: ~18% odds when warp is on (warp is always on
+                  for MACHINE), with a replayable deck position and opacity. */
+            var milkFx = {
+                active: !!(i !== 0 && rng() < 0.18),
+                presetId: 1 + ((rng() * 80) | 0),
+                opacity: +(0.35 + rng() * 0.50).toFixed(3)
+            };
+
+            /* ── Hard Light: ~15% odds on the high-contrast personalities. */
+            var hardLight = !!(i !== 0 && (arch.name === 'storm' || arch.name === 'lush') && rng() < 0.15);
 
             /* ── Optional locks ──────────────────────────────────────────────── */
             var lockMap = {};
@@ -1184,7 +1223,7 @@
             out[name] = {
                 machine: true,
                 tag: tag,
-                seed: seed,
+                seed: deckSeed,
                 alphas: alphas,
                 masterOpacity: masterOpacity,
                 ghostLevel: gl,
@@ -1194,7 +1233,9 @@
                 warpMode: warpMode,
                 warpStrength: warpStrength,
                 glyphBank: glyphBank,
-                hardLight: !!(i !== 0 && arch.name === 'storm' && rng() < 0.18),
+                voiceFx: voiceFx,
+                hardLight: hardLight,
+                milk: milkFx,
                 vsyncLevels: {
                     ON: vm === 'ON' ? vl : 0.50,
                     GHOST_OFF: vm === 'GHOST_OFF' ? vl : 0.55,
@@ -1205,196 +1246,6 @@
                 toggles: {
                     autoGlitch: !!ag,
                     continualRandomize: !!cr,
-                    automatedMasters: !!am,
-                    softEyeMode: softEye,
-                    aiWarp: true
-                }
-            };
-        }
-        return out;
-    }
-
-    function mintPresetTag(rng, used) {
-        var codex = CODEX_WORDS;
-        var pick = function () { return codex[(rng() * codex.length) | 0] || 'SIGNAL'; };
-        for (var n = 0; n < 24; n++) {
-            var a = pick(), b = pick();
-            var forms = [
-                a + ' ' + b,
-                leetEncodeWord(a) + ' ' + b,
-                a + '-' + b,
-                '006 ' + a,
-                a + ' ' + leetEncodeWord(b),
-                b + ' ' + a,
-                a + ' CODEX',
-                'DIA ' + a,
-                'GHOST ' + a,
-                a + ' SHELL',
-                'REBIRTH ' + b,
-                'f34R ' + a
-            ];
-            var tag = forms[(rng() * forms.length) | 0];
-            if (tag.length > 28) tag = (a + ' ' + b).slice(0, 28);
-            if (!used[tag] && a !== b) { used[tag] = 1; return tag; }
-        }
-        var fallback = 'SEED ' + ((rng() * 0xFFFF) | 0).toString(16).toUpperCase();
-        used[fallback] = 1;
-        return fallback;
-    }
-
-    function randBwLevel(rng) {
-        var roll = rng();
-        if (roll < 0.22) return 0;
-        if (roll < 0.48) return 0.50;
-        if (roll < 0.82) return 0.75;
-        return 1.0;
-    }
-
-    function buildMachinePresets(customSeed) {
-        var CORE_FX = [
-            'Neon Grad', 'Scanlines', 'Data Bands', 'Flash', 'HSL Rainbow', 'ASCII',
-            'Font Burn', 'Strobe', 'Gemini Bomb', 'Tech Artist', 'VHS Glitch',
-            'Data Bomb', 'Ink Glyphs', 'Matrix ASCII', 'Matrix Chord',
-            'B&W Invert', 'Hue/Color Cycle'
-        ];
-        var GC3_FX = CORE_FX.map(function (name) { return name + ' GC#(3)'; });
-        var FX = CORE_FX.concat(GC3_FX);
-        var coreName = function (name) { return String(name).replace(/ GC#\(3\)$/, ''); };
-        var WARP_MODES = [
-            'liquid', 'prism', 'breathe', 'fold', 'aurora', 'vortex',
-            'cybergrid', 'hyperdrive', 'kaleidoscope', 'quantum', 'ripple', 'analog_crt',
-            'newblue_roll', 'newblue_active_cam', 'newblue_shear', 'newblue_wiggle',
-            'newblue_zoom_blur', 'newblue_video_tile', 'newblue_twirl', 'newblue_light_ring',
-            'newblue_earthquake', 'newblue_water_drop', 'newblue_rgb_shift', 'newblue_quad_mirror',
-            'newblue_fish_eye', 'newblue_pinch', 'newblue_solarize', 'newblue_cathode_beam', 'newblue_neon_edges'
-        ];
-        var GHOST_MODES_LIST = ['OFF', 'DIA', 'SPECTRUM', 'CRT', 'PLASMA', 'LED'];
-        var VSYNC_MODES_LIST = ['OFF', 'ON', 'GHOST_OFF', 'FULL'];
-
-        // Fresh dynamic seed on every invocation/reload unless explicit seed passed
-        var seed = (typeof customSeed === 'number' && customSeed !== 0xF34D07)
-            ? customSeed
-            : (((Date.now() ^ (Math.random() * 0xFFFFFF))) >>> 0) || 1;
-        var rng = mulberry32(seed);
-        var usedTags = Object.create(null);
-
-        var DEFAULT_MASTERS = {
-            effectIntensity: 0.85, motionScale: 0.80, blendSoftness: 0.50,
-            continualSpeed: 0.85, autoGlitchPower: 0.70, boardEnergy: 0.65
-        };
-
-        var out = {};
-        for (var i = 0; i < 80; i++) {
-            var name = 'Deepseek-' + (i + 1);
-            var tag = (i === 0) ? 'OLD SOUL' : mintPresetTag(rng, usedTags);
-            var personality = rng();
-            var alphas = {};
-            for (var f = 0; f < FX.length; f++) alphas[FX[f]] = 0;
-
-            var warpMode, warpStrength, masterOpacity;
-
-            if (i === 0) {
-                // Preserved baseline seed anchor: Deepseek-1 · OLD SOUL
-                alphas['Neon Grad'] = 0.18;
-                alphas['Scanlines'] = 0.14;
-                alphas['Flash'] = 0.20;
-                alphas['HSL Rainbow'] = 0.18;
-                alphas['ASCII'] = 0.22;
-                alphas['Font Burn'] = 0.26;
-                alphas['Strobe'] = 0.24;
-                alphas['Gemini Bomb'] = 0.20;
-                alphas['Tech Artist'] = 0.18;
-                alphas['VHS Glitch'] = 0.18;
-                alphas['Data Bands'] = 0.12;
-                // OLD SOUL remains calm, but now starts as a true two-bank scene.
-                CORE_FX.forEach(function (fx, index) {
-                    if (alphas[fx] > 0) alphas[fx + ' GC#(3)'] = +Math.min(0.18, alphas[fx] * (0.52 + (index % 4) * 0.04)).toFixed(3);
-                });
-
-                warpMode = 'liquid';
-                warpStrength = 0.45;
-                masterOpacity = 0.88;
-            } else {
-                // Presets 2..80: every scene starts with a paired core/R3 anchor.
-                // The rotating anchor guarantees that all 17 new GC#(3) factories
-                // receive preset coverage across each machine-preset bank.
-                var anchor = CORE_FX[(i - 1) % CORE_FX.length];
-                var anchorR3 = anchor + ' GC#(3)';
-                alphas[anchor] = +(0.13 + rng() * 0.22).toFixed(3);
-                alphas[anchorR3] = +(0.10 + rng() * 0.20).toFixed(3);
-                // Add 1–4 restrained accents from either voice bank.
-                var voiceCount = 1 + ((rng() * 4) | 0);
-                var shuffled = FX.slice().sort(function () { return rng() - 0.5; });
-
-                for (var v = 0; v < voiceCount; v++) {
-                    var fx = shuffled[v];
-                    var baseFx = coreName(fx);
-                    if (fx === anchor || fx === anchorR3) continue;
-                    if (baseFx === 'B&W Invert') {
-                        alphas[fx] = rng() < 0.25 ? 0.22 : 0;
-                    } else if (baseFx === 'Flash' || baseFx === 'Strobe') {
-                        alphas[fx] = +(0.07 + rng() * 0.20).toFixed(3); // Soft/tasteful
-                    } else {
-                        alphas[fx] = +(0.08 + rng() * 0.28).toFixed(3);
-                    }
-                }
-
-                // AI WARP randomized level and mode
-                warpMode = WARP_MODES[(rng() * WARP_MODES.length) | 0];
-                warpStrength = +(0.18 + rng() * 0.44).toFixed(2);
-                masterOpacity = +(0.72 + rng() * 0.20).toFixed(2);
-            }
-
-            var gm = (i === 0) ? 'OFF' : (rng() < 0.35 ? 'OFF' : GHOST_MODES_LIST[(rng() * GHOST_MODES_LIST.length) | 0]);
-            var vm = (i === 0) ? 'OFF' : (rng() < 0.35 ? 'OFF' : VSYNC_MODES_LIST[(rng() * VSYNC_MODES_LIST.length) | 0]);
-            var gl = gm === 'OFF' ? 0 : +(0.18 + rng() * 0.45).toFixed(3);
-            var vl = vm === 'OFF' ? 0 : +(0.20 + rng() * 0.45).toFixed(3);
-
-            var ag = i !== 0 && rng() < 0.25 ? 1 : 0;
-            var cr = i === 0 ? 0 : (rng() < 0.40 ? 1 : 0);
-            var ta = i !== 0 && rng() < 0.22 ? 1 : 0;
-            var am = i !== 0 && rng() < 0.25 ? 1 : 0;
-            var softEye = i !== 0 && rng() < 0.20 ? (rng() < 0.5 ? 'SURGE' : 'CRESCENDO') : 'OFF';
-
-            var lockMap = {};
-            if (i !== 0 && rng() < 0.15) {
-                var lk = FX[(rng() * FX.length) | 0];
-                if (alphas[lk] > 0.10) lockMap[lk] = true;
-            }
-
-            var masterMix = Object.assign({}, DEFAULT_MASTERS);
-            if (i !== 0) {
-                masterMix.effectIntensity = +(0.50 + rng() * 0.35).toFixed(3);
-                masterMix.motionScale = +(0.45 + rng() * 0.45).toFixed(3);
-                masterMix.blendSoftness = +(0.30 + rng() * 0.50).toFixed(3);
-                masterMix.continualSpeed = +(0.65 + rng() * 0.55).toFixed(3);
-                masterMix.autoGlitchPower = +(0.40 + rng() * 0.45).toFixed(3);
-                masterMix.boardEnergy = +(0.35 + rng() * 0.45).toFixed(3);
-            }
-
-            out[name] = {
-                machine: true,
-                tag: tag,
-                seed: seed,
-                alphas: alphas,
-                masterOpacity: masterOpacity,
-                ghostLevel: gl,
-                ghostMode: gm,
-                vsyncMode: vm,
-                aiWarp: true,
-                warpMode: warpMode,
-                warpStrength: warpStrength,
-                vsyncLevels: {
-                    ON: vm === 'ON' ? vl : 0.50,
-                    GHOST_OFF: vm === 'GHOST_OFF' ? vl : 0.55,
-                    FULL: vm === 'FULL' ? vl : 0.60
-                },
-                masterControls: masterMix,
-                locks: lockMap,
-                toggles: {
-                    autoGlitch: !!ag,
-                    continualRandomize: !!cr,
-                    timedAutomation: !!ta,
                     automatedMasters: !!am,
                     softEyeMode: softEye,
                     aiWarp: true

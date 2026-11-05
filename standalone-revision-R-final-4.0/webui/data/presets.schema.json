@@ -33,7 +33,7 @@
       "additionalProperties": false
     },
     "settings": {
-      "description": "Normalized settings stored in USER presets and in the export file.",
+      "description": "Normalized settings stored in USER presets and in the export file. v4 adds optional hardLight, milk, glyphAuto, seed and sliderLocks.glyphBank / sliderLocks.hardLight while every v3 preset stays valid.",
       "type": "object",
       "properties": {
         "alphas": { "type": "object", "maxProperties": 128, "additionalProperties": { "$ref": "#/$defs/level" } },
@@ -66,7 +66,21 @@
           "additionalProperties": false
         },
         "locks": { "type": "object", "additionalProperties": { "type": "boolean" } },
+        "sliderLocks": { "type": "object", "additionalProperties": { "type": "boolean" } },
         "glyphBank": { "type": "string" },
+        "hardLight": { "type": "boolean" },
+        "glyphAuto": { "type": "boolean" },
+        "seed": { "type": "integer" },
+        "milk": {
+          "type": "object",
+          "required": ["active"],
+          "properties": {
+            "active": { "type": "boolean" },
+            "presetId": { "type": "integer", "minimum": 1, "maximum": 80 },
+            "opacity": { "$ref": "#/$defs/level" }
+          },
+          "additionalProperties": false
+        },
         "toggles": {
           "type": "object",
           "properties": {

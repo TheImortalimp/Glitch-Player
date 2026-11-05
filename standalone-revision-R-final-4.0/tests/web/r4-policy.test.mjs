@@ -163,6 +163,38 @@ test('unsupported or malformed ID3 artwork is rejected', () => {
 
 const goodEntry = () => ({ name: 'My preset', settings: { effects: { 'Signal Tear': 0.5, 'Cyber Rain': 0 } } });
 
+test('schema v4 optional preset fields are validated only when present (v3 stays valid)', () => {
+    const base = goodEntry().settings;
+    assert.ok(policy.validPresetSettings(base), 'plain v3 settings stay valid');
+    assert.ok(policy.validPresetSettings({
+        ...base,
+        hardLight: true,
+        glyphAuto: false,
+        seed: 123456789,
+        milk: { active: true, presetId: 42, opacity: 0.6 },
+        sliderLocks: { glyphBank: true, hardLight: false }
+    }), 'all v4 optional fields accepted');
+    assert.ok(policy.validPresetSettings({ ...base, milk: { active: false } }), 'milk presetId/opacity optional');
+    const bad = [
+        { ...base, hardLight: 'yes' },
+        { ...base, glyphAuto: 0 },
+        { ...base, seed: 1.5 },
+        { ...base, seed: '42' },
+        { ...base, milk: null },
+        { ...base, milk: { presetId: 3 } },
+        { ...base, milk: { active: 'on' } },
+        { ...base, milk: { active: true, presetId: 0 } },
+        { ...base, milk: { active: true, presetId: 81 } },
+        { ...base, milk: { active: true, opacity: -0.1 } },
+        { ...base, milk: { active: true, opacity: 1.1 } },
+        { ...base, sliderLocks: { glyphBank: 'locked' } },
+        { ...base, locks: [true] }
+    ];
+    for (const settings of bad) {
+        assert.equal(policy.validPresetSettings(settings), false, JSON.stringify(settings));
+    }
+});
+
 test('user preset entries require a bounded name and finite 0..1 effect levels', () => {
     assert.ok(policy.validPresetEntry(goodEntry()));
     assert.ok(policy.validPresetEntry({ name: 'x'.repeat(80), settings: { alphas: { Flash: 1 } } }));

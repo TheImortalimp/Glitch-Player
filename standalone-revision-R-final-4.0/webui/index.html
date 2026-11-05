@@ -155,6 +155,9 @@
             <button id="presetListToggleBtn" type="button" title="Switch between user presets and the fixed built-in preset banks">USER</button>
             <button id="presetLabBtn" type="button" title="Switch to the 250 immutable LAB snapshots">LAB 250</button>
             <button id="presetAutoBtn" type="button" title="Auto-cycle presets"> -ʁ%AUTO%ʁ- </button>
+            <input id="machineSeedInput" type="text" inputmode="numeric" maxlength="10" title="MACHINE deck seed — the 80 Deepseek presets are fully determined by this 32-bit seed; paste a seed and press Re-roll to replay that exact deck">
+            <button id="machineSeedCopyBtn" type="button" title="Copy the MACHINE deck seed to the clipboard">Seed Copy</button>
+            <button id="machineSeedRollBtn" type="button" title="Re-roll the MACHINE deck — fresh seed, or the pasted seed if you changed the field">Seed Re-roll</button>
             <input id="presetNameInput" type="text" placeholder="preset name">
             <button id="presetSaveBtn" title="Save current board as a USER preset">Save</button>
             <button id="presetDeleteBtn" title="Delete selected USER preset">Delete</button>

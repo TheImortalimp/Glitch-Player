@@ -967,6 +967,13 @@ body.playback-on #preset-toggle-btn {
 .preset-bar input[type="text"]::placeholder {
     color: rgba(255, 255, 255, .35);
 }
+/* MACHINE deck seed — numeric 32-bit seed, orange like the MACHINE list skin */
+#machineSeedInput {
+    min-width: 72px;
+    max-width: 96px;
+    color: #ffb347;
+    font-variant-numeric: tabular-nums;
+}
 /* ...while ALL action text is red and a size below the preset name */
 .preset-bar button {
     color: #ff3131;

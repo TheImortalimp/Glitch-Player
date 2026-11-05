@@ -131,9 +131,31 @@
         const effects = isPlainRecord(settings.effects) ? settings.effects :
             (isPlainRecord(settings.alphas) ? settings.alphas : null);
         if (!effects || Object.keys(effects).length > MAX_PRESET_EFFECTS) return false;
-        return Object.keys(effects).every((name) =>
+        if (!Object.keys(effects).every((name) =>
             typeof effects[name] === 'number' && Number.isFinite(effects[name]) &&
-            effects[name] >= 0 && effects[name] <= 1);
+            effects[name] >= 0 && effects[name] <= 1)) return false;
+        /* Schema v4 optional fields — validated only when present, so every
+           version-3 preset stays valid. */
+        if ('hardLight' in settings && typeof settings.hardLight !== 'boolean') return false;
+        if ('glyphAuto' in settings && typeof settings.glyphAuto !== 'boolean') return false;
+        if ('seed' in settings && !Number.isInteger(settings.seed)) return false;
+        if ('milk' in settings) {
+            const milk = settings.milk;
+            if (!isPlainRecord(milk) || typeof milk.active !== 'boolean') return false;
+            if ('presetId' in milk &&
+                !(Number.isInteger(milk.presetId) && milk.presetId >= 1 && milk.presetId <= 80)) return false;
+            if ('opacity' in milk &&
+                !(typeof milk.opacity === 'number' && Number.isFinite(milk.opacity) &&
+                    milk.opacity >= 0 && milk.opacity <= 1)) return false;
+        }
+        for (const lockKey of ['sliderLocks', 'locks']) {
+            if (lockKey in settings) {
+                const locks = settings[lockKey];
+                if (!isPlainRecord(locks)) return false;
+                if (!Object.keys(locks).every((key) => typeof locks[key] === 'boolean')) return false;
+            }
+        }
+        return true;
     }
 
     function validPresetName(name) {

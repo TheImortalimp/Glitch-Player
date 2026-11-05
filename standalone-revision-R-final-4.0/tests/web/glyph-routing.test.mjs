@@ -365,8 +365,8 @@ test('glyph roll, auto-cycle and the glyph hard lock are wired into the board, t
     assert.match(html, /<button id="glyphRandBtn" type="button"[^>]*>Glyph Roll<\/button>/);
     assert.match(html, /<button id="glyphAutoBtn" type="button"[^>]*>Glyph Auto: OFF<\/button>/);
     assert.match(html, /<button id="glyphLockBtn" type="button" class="lock-button"[^>]*>&lt;LOCK!&gt;<\/button>/);
-    assert.match(player, /const sliderLocks = \{ global: false, glyphBank: false \};/,
-        'the glyph lock key is seeded so saved locks survive preset normalization');
+    assert.match(player, /const sliderLocks = \{ global: false, glyphBank: false, hardLight: false \};/,
+        'the glyph and hard-light lock keys are seeded so saved locks survive preset normalization');
     assert.match(player, /if \(r < 0\.10 \|\| !pool\.length\) return 'Engine realms \(Revision 3\)';\s*if \(r < 0\.20\) return 'All scripts';/,
         'Glyph Roll keeps the 10% / 10% / 80% odds');
     const board = player.slice(player.indexOf('function randomizeBoard('), player.indexOf('function applyRandomSeed('));
