@@ -1,4 +1,4 @@
-# Roadmap - TOTAL CONFLUENCE
+# HIST-4.2-00 — Roadmap: Total Confluence (design reference)
 
 The host already calls itself the "TOTAL CONFLUENCE effects engine" (`host/GlitchPlayerR4.csproj`). 4.1 delivered the
 definition layer: `effects.manifest.json`, `presets.schema.json`, `surfaces.manifest.json`, each with a `--check`

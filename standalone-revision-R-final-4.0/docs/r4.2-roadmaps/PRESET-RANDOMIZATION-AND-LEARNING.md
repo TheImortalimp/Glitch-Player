@@ -1,4 +1,4 @@
-# Roadmap - Preset randomization & learning
+# HIST-4.2-02 — Roadmap: Preset Randomization & Learning (design reference)
 
 4.1 unfroze the 80 MACHINE presets: they re-roll from a fresh random seed on every start and Refresh, validated
 against `presets.schema.json`. LAB 250 stays fixed. **4.1.3 shipped the core of phase 1: the deck is fully

@@ -1,4 +1,4 @@
-# Roadmap - Rebuilding
+# HIST-4.2-04 — Roadmap: Rebuilding (release reference)
 
 Everything generated must be rebuildable from pinned references, and the build itself must be boringly repeatable.
 4.1 already rebuilds glyph tables from Unicode 15.1.0 + CP437 (pinned by SHA-256) and manifests from code, each with

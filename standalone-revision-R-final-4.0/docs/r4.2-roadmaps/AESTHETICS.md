@@ -1,4 +1,4 @@
-# Roadmap - Aesthetics
+# HIST-4.2-03 — Roadmap: Aesthetics (design reference)
 
 The 4.x look: gold [R] card with silver sheen, turning gold-and-silver rim, sparkle glints, prism band, GHOST PROTOCOL
 glyph rain, link-tree gleam waves, REVISION 4 // HARD LIGHT // MOONLIGHT. 4.1 loosened the SOFT-EYE engine's

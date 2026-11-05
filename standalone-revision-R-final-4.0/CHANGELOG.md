@@ -1,5 +1,21 @@
 # Changelog - Standalone Revision R Final 4.1
 
+## v4.2.4-ear-monitor.1 - 2026-11-05 (prerelease)
+
+- Cache EAR monitor nodes and stop hidden/inactive presentation work.
+- Cap monitor presentation at 12 Hz in the existing frame loop; use transform-based
+  fills and canonical numeric strings to avoid repeated native CSSOM writes.
+- Keep the separate EAR mode/WAIT control accurate while the monitor is hidden.
+- Preserve EAR processing, SOFT-EYE, effects, automation, video quality and security.
+- Add six behavioral tests and import the supplied ordered roadmaps/TODOs.
+- Verification: 286 tests passed, native light-load A/B checks passed, Defender clean.
+  The broader playback gate remains open; no universal smoothness claim is made.
+- Publish the tested 4.2.4 installer under a distinct prerelease tag in the new
+  `TheImortalimp/Glitch-Player` repository without replacing historical assets.
+
+See [prerelease notes](docs/r4.3/RELEASE-NOTES-4.2.4-EAR-MONITOR-1.md) for downloads,
+checksum, installation notes and remaining validation limits.
+
 ## 4.2.4 - 2026-11-04 (GitHub release `RELEASE_4.2.4`) - Final Confluence
 
 **The final consolidated release of the Revision R 4.x line**, carrying every update since the r4.2 roadmaps were

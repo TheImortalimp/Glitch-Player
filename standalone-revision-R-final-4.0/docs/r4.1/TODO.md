@@ -1,4 +1,4 @@
-# TODO - R4.1
+# HIST-TODO-4.1 — R4.1 legacy checklist
 
 ## Phase 1: Define
 - [x] Clone the repo (/root/Glitch-Player-Final-Test-Version) and run `npm test`: 132/132 pass (Node v26.12.1)

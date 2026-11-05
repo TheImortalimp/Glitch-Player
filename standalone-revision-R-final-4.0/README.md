@@ -1,8 +1,27 @@
 # Glitch Player - Standalone Revision R Final 4.1
 
+## Current prerelease: v4.2.4-ear-monitor.1
+
+[Download the tested Windows x64 installer](https://github.com/TheImortalimp/Glitch-Player/releases/download/v4.2.4-ear-monitor.1/Glitch-Player-R4-4.2.4-x64-setup.exe)
+or open the [release page](https://github.com/TheImortalimp/Glitch-Player/releases/tag/v4.2.4-ear-monitor.1).
+This monitor-only candidate retains installer version **4.2.4**. It caps EAR monitor
+presentation at 12 Hz and stops hidden updates without changing EAR, effects,
+automation, video quality or security. It is a **prerelease** because the full
+playback/stress-testing matrix remains open.
+
+Size: **44,657,686 bytes**. SHA-256:
+`f530d6570e6c10b154a4f3368d1998b10bf8a82c732caa692919aff9e3011080`.
+The installer is unsigned. See the
+[prerelease notes](docs/r4.3/RELEASE-NOTES-4.2.4-EAR-MONITOR-1.md) and
+[build evidence](BUILD_STATUS.md#phase-0-prerelease-candidate-2026-11-05).
+
+## Proposed next release planning
+
+The proposed R4.3 roadmaps and ordered checklists are indexed in [docs/ROADMAP-INDEX.md](docs/ROADMAP-INDEX.md) and sequenced by [docs/r4.3/TODO-00-MASTER.md](docs/r4.3/TODO-00-MASTER.md). The order is: [R4.3-00 EAR playback](docs/r4.3/ROADMAP-00-EAR-PLAYBACK.md), [R4.3-01 link-list transitions/cuts](docs/r4.3/ROADMAP-01-LINK-LIST-TRANSITIONS.md), then [R4.3-02 Full Confluence](docs/r4.3/FULL-CONFLUENCE-ROADMAP.md). Each has a matching detailed TODO. The approved Phase 0 monitor fix and limited native checks are complete; the broader regression gate remains open. The maintainer separately approved publication of this candidate as a prerelease. Later implementation still requires review and approval.
+
 Revision R Final 4.1 is a newly coded, hardened Windows desktop player. It is a .NET 10 WinForms host with a locked-down Microsoft Edge WebView2 view, installed per user by an NSIS setup. It merges every effect voice from Glitch Player Revision 3.0, the Glitch Canvas Projector and AI WARP ENGINE into one effects engine and one preset system.
 
-This is release **4.2.4 "Final Confluence"**, the final consolidated release, published as the GitHub release [`RELEASE_4.2.4`](https://github.com/TheImortalimp/Glitch-Player-Final-Test-Version/releases/tag/RELEASE_4.2.4). It carries 4.1.3 "Strands" ([`RELEASE_4.1.3`](https://github.com/TheImortalimp/Glitch-Player-Final-Test-Version/releases/tag/RELEASE_4.1.3)), 4.1.2 "Room & Cut" ([`RELEASE_4.1.2`](https://github.com/TheImortalimp/Glitch-Player-Final-Test-Version/releases/tag/RELEASE_4.1.2)), 4.1.1 "Breathing Room" ([`RELEASE_4.1.1`](https://github.com/TheImortalimp/Glitch-Player-Final-Test-Version/releases/tag/RELEASE_4.1.1)), 4.1.0 "Definition & Confluence" ([`RELEASE_4.1`](https://github.com/TheImortalimp/Glitch-Player-Final-Test-Version/releases/tag/RELEASE_4.1)) and the 4.0 line ([`RELEASE_4.0`](https://github.com/TheImortalimp/Glitch-Player-Final-Test-Version/releases/tag/RELEASE_4.0)). See [What's new in 4.1](#whats-new-in-41).
+The historical base is **4.2.4 "Final Confluence"**, published as the original GitHub release [`RELEASE_4.2.4`](https://github.com/TheImortalimp/Glitch-Player-Final-Test-Version/releases/tag/RELEASE_4.2.4). It carries 4.1.3 "Strands" ([`RELEASE_4.1.3`](https://github.com/TheImortalimp/Glitch-Player-Final-Test-Version/releases/tag/RELEASE_4.1.3)), 4.1.2 "Room & Cut" ([`RELEASE_4.1.2`](https://github.com/TheImortalimp/Glitch-Player-Final-Test-Version/releases/tag/RELEASE_4.1.2)), 4.1.1 "Breathing Room" ([`RELEASE_4.1.1`](https://github.com/TheImortalimp/Glitch-Player-Final-Test-Version/releases/tag/RELEASE_4.1.1)), 4.1.0 "Definition & Confluence" ([`RELEASE_4.1`](https://github.com/TheImortalimp/Glitch-Player-Final-Test-Version/releases/tag/RELEASE_4.1)) and the 4.0 line ([`RELEASE_4.0`](https://github.com/TheImortalimp/Glitch-Player-Final-Test-Version/releases/tag/RELEASE_4.0)). Those older installer assets do not contain this monitor fix. See [What's new in 4.1](#whats-new-in-41).
 
 > **Photosensitivity warning:** source videos and effects can produce flashing and high-contrast flicker. Flash and Strobe start at zero and are capped at 20% and 35%. Presets can set their saved values within those caps; Randomize does not change them. Optional automatic movement is off by default, session-only and requires confirmation. When enabled it applies on any media, fades in, and eases to zero while local media is paused or ended. The GHOST // OF ME easter egg applies its saved, capped levels when its MISSING LINK track starts (including a typed or pasted link); it enables automatic movement only after its Ctrl+Alt+G confirmation. This is not a photosensitivity-safe mode.
 
@@ -61,6 +80,13 @@ AI WARP's warp modes, its Three.js renderer and the R3 Flash/Strobe twins are de
 The printable ASCII and Unicode glyph banks from the projector are included (125 tables, 127,648 code points), with their original AI Warp / Revision 3 bank credits. For the final release they were rebuilt from fixed references: `tools\build-glyph-tables.mjs` generates `webui\js\glyph-tables.js` from the Unicode Character Database 15.1.0 and the IBMGRAPH/CP437 mappings, each pinned by size and SHA-256. The rebuilt tables are identical to the projector's. `node tools\build-glyph-tables.mjs --check` downloads the references again and fails if the committed tables differ. At startup `glyph-library.js` validates every table (name, ranges, forbidden code points, count and checksum) and freezes it; a table that fails is left out, a warning is logged, and the count's hover text reports the result. Glyphs are taken by Unicode code point, so astral characters are never split. The glyph-source menu defaults to **Engine realms (Revision 3)**, which keeps every voice on its original glyphs. Choosing a table gives it to the main ASCII voice; the other glyph voices each take their own table, rotated forward from it in this order: Cyber Rain, R3 ASCII, Matrix ASCII, Matrix Chord, R3 Matrix ASCII, R3 Matrix Chord, Data Bomb and R3 Data Bomb. Hover over the count next to the menu to see the current assignment. **All scripts** mixes every table into every voice. Ink Glyphs and Font Burn keep their own alphabets, and the R3 shimmer veil and R3 ASCII brightness ramp keep the Revision 3 glyphs. Some rare-script tables can show as empty boxes where Windows has no font for them.
 
 ## Smooth playback
+
+In the Phase 0 prerelease candidate, the EAR monitor presents at most 12 times per
+second and does no presentation work while hidden or playback is inactive.
+Its meter fills use transforms rather than changing widths. This does not slow
+EAR analysis, SOFT-EYE, effects, automation or YouTube playback, or lower video
+quality. See [build status](BUILD_STATUS.md#phase-0-prerelease-candidate-2026-11-05)
+for native results, the installer hash and the remaining validation limits.
 
 A frame governor watches frame timing. When the machine can't keep up, it lowers the effects canvas in up to two steps: first a lower resolution and glyph density, then lower still with effects drawn at half rate. After about 400 frames with clear headroom (about 17 s at 24 Hz, 7 s at 60 Hz) it steps back up. If a step up has to be undone soon after, the wait before the next try doubles each time, and goes back to normal once the effects get lighter.
 
@@ -138,6 +164,16 @@ Requirements:
 - Node.js 22 or later (tests, icon generation and CAB packaging)
 - NSIS 3 (`makensis.exe` on `PATH` or in Program Files)
 - Windows `makecab.exe` and the .NET Framework C# compiler (the launcher uses the Windows-provided .NET Framework/WPF assemblies; no new package dependency)
+
+For this prerelease, clone the exact tag with LF line endings preserved:
+
+```powershell
+git clone --config core.autocrlf=false --branch v4.2.4-ear-monitor.1 https://github.com/TheImortalimp/Glitch-Player.git Glitch-Player
+Set-Location '.\Glitch-Player\standalone-revision-R-final-4.0'
+```
+
+This per-clone setting is required by the source-slicing tests; it does not change
+global Git settings. Preserve LF when editing the source.
 
 From this folder, run:
 

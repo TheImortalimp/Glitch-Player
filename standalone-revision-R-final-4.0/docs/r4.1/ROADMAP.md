@@ -1,4 +1,4 @@
-# Roadmap - R4.1 (target: December 2026)
+# HIST-4.1-00 — Roadmap (superseded; original target: December 2026)
 
 | Phase | Weeks | Outcome | Exit criteria |
 | --- | --- | --- | --- |

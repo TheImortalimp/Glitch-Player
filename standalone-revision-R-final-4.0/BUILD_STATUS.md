@@ -2,13 +2,117 @@
 
 This file records what was actually built and tested, and what hasn't been tested yet. "Verified" means the check was run and passed on the machine below. The binaries are **not code-signed**.
 
+## Phase 0 prerelease candidate (2026-11-05)
+
+Approved scope: the EAR monitor presentation fix only, on local branch
+`fix/ear-youtube-playback`, based on `51af585f2a84f5064de3d750ab3d7dd4213307df`.
+The maintainer separately approved publishing the source, roadmaps and this exact
+tested installer to the new public
+[Glitch-Player repository](https://github.com/TheImortalimp/Glitch-Player) as
+[prerelease v4.2.4-ear-monitor.1](https://github.com/TheImortalimp/Glitch-Player/releases/tag/v4.2.4-ear-monitor.1).
+The tag identifies the source snapshot. The installer was built from the baseline
+plus the monitor patch before its publication commit; documentation-only publication
+updates did not rebuild or change its bytes. This is **not** a stable release or
+approval for later R4.3 implementation. The existing Downloads installer was not replaced.
+
+### Change and build verification
+
+- Cache monitor nodes; skip presentation when hidden, inactive, paused/buffering,
+  or hidden for capture; cap visible presentation at **12 Hz maximum** in the
+  existing frame loop.
+- Use transform-based meter fills instead of transitioning widths. Canonical
+  numeric strings avoid redundant writes after native CSSOM serialization.
+  A native check caught this serialization edge case; the regression test failed
+  before correction and passed afterward.
+- Keep the separate EAR mode/WAIT button current while the monitor is hidden.
+  EAR processing, SOFT-EYE, effects, automation, video filtering/resolution,
+  host policies and security settings are unchanged.
+- `build.cmd`: **286 passing tests** (96 host, 189 web, 1 CAB integration).
+  Six new behavioral tests cover the presentation change. Debug build: zero
+  warnings/errors. Effects/surfaces manifest checks and the pinned glyph-table
+  check passed.
+- Source JavaScript/CSS match both Debug and published assets by SHA-256.
+  Defender reported no threats in the final installer or working package.
+
+| Item | Tested prerelease candidate |
+| --- | --- |
+| Installer | [GitHub release asset](https://github.com/TheImortalimp/Glitch-Player/releases/download/v4.2.4-ear-monitor.1/Glitch-Player-R4-4.2.4-x64-setup.exe) |
+| Size | 44,657,686 bytes |
+| SHA-256 | `f530d6570e6c10b154a4f3368d1998b10bf8a82c732caa692919aff9e3011080` |
+| CAB SHA-256 | `fe781ea64a25490eb4c7ec4bd1818b2a93b59a8d2e02aac23a2242d6d705a4c5` |
+| Payload | 249 files |
+| Product version | 4.2.4, intentionally unchanged |
+| Signing / installation | Unsigned; not installed by this work |
+| Publication | Prerelease `v4.2.4-ear-monitor.1`; original repositories unchanged |
+
+### Native playback evidence
+
+Windows 11 Pro `10.0.26200`; Intel Core i5-14400F; NVIDIA GeForce RTX 5060,
+driver `32.0.16.1062`; 1920x1080 display reporting **24 Hz**.
+WebView2 `155.0.4283.62`, V8 `15.5.9.7`; .NET SDK `10.0.403`, Node `v24.19.0`.
+Testing used the existing Debug-only loopback port, not a substitute browser.
+Diagnostic preferences were restored and owned test instances closed normally.
+
+Each completed series used three alternating visible/hidden pairs, with 30 seconds
+warm-up and 30 seconds sampling per case: built-in TRIPPY FRACTALS, ZERO ALL,
+EAR AUTO, SOFT-EYE on, and unchanged adaptive YouTube quality (`hd720`).
+ZERO ALL leaves some master settings in place; nonzero range-control counts are
+not a count of active effect voices.
+
+| Series | Viewport / DPR | p50 / p95 / p99 RAF interval | >1.5x / >2x display-period gaps |
+| --- | --- | --- | --- |
+| Unchanged baseline, 6 runs | 1280x800 / 1 | 41.7 / 41.8 / 41.8 ms | 0 / 0 |
+| Initial monitor patch, 6 runs | 1280x800 / 1 | 41.7 / 41.8 / 41.8 ms | 1 hidden-only / 0 |
+| Final corrected patch, 6 runs | 854x534 / 1.5 | 41.7 / 41.8 / 41.8 ms | 0 / 0 |
+
+All sampled player states were PLAYING; playback clocks advanced without repeated
+samples. In the final series, hidden monitors produced **zero mutations** in all
+three runs. Visible mutation callbacks peaked at 10, 11 and 10 per second, below
+the 12 Hz cap; unchanged values need not cause a mutation. Unit tests separately
+verify presenter spacing at 24, 60 and 144 Hz.
+
+Average main-thread measurements per 30-second sample:
+
+| Series | Visible / hidden layout time | Visible / hidden task time |
+| --- | --- | --- |
+| Baseline | 0.294445 / 0.225599 s | 3.429299 / 2.889910 s |
+| Initial patch | 0.154478 / 0.153098 s | 2.151105 / 2.001457 s |
+| Final patch | 0.243391 / 0.237212 s | 3.367547 / 3.076030 s |
+
+The final launch reported a different DPR; its values are **not** a matched
+before/after comparison with the earlier series. Video segments and live runtime
+load also varied. Frame timing met the 5% visible/hidden target in these light-load
+runs, but final visible task time was about 9.5% higher than hidden. Do not interpret
+these results as a universal performance improvement or a full gate pass.
+
+Native AUTO/AUDIO/CANVAS hide/show checks passed, including zero hidden mutations
+and AUDIO WAIT labeling for the YouTube visual proxy. Native reduced-motion
+emulation disabled meter transitions. Fullscreen automatically selected `hd1080`,
+both at 1920x1080/DPR 1 and 1280x720/DPR 1.5 (1920x1080 physical pixels).
+The maintainer assessed the initial fullscreen candidate as **"Sharp and smooth"**.
+No permanent video-filter or quality-selection change was needed for that case.
+
+Bounded, opt-in evidence remains local in the session: `baseline-measurements.json`,
+`candidate-measurements.json`, `final-measurements.json`, corresponding sanitized
+traces, `candidate-native-smoke.json`, and `native-build-final.log`. Trace arguments
+were stripped; no diagnostic code ships in the app.
+
+**Remaining limitations:** the baseline did not reproduce continuous visible-only
+stutter. App RAF timing is not decoded-video frame timing. Local-media playback,
+source/playlist changes, SOFT-EYE off, heavy/all-automation workloads, additional
+refresh rates/constrained hardware, a known-good-release comparison, ETW/GPUView,
+and full keyboard/screen-reader validation remain untested in the native matrix.
+The [R4.3-00 gate](docs/r4.3/TODO-00-MASTER.md) remains open; later phases and stable
+release remain blocked. The maintainer approved this limited candidate as a
+prerelease, not a gate pass. Revisit sharpness diagnostics if the reported blur recurs.
+
 ## 4.2.4 build note (2026-11-04)
 
 **The final consolidated build of the 4.x line.** Built on Windows 11 x64 with `build.cmd`: **272 tests total**
 (96 xUnit host tests, 175 Node web tests - new: the untied-voices and safe-B&W guards - and 1 CAB integration test).
 The build's **Defender guard** scanned the installer and working package: no threats.
 
-## Current build (4.2.4, silent update 3 - EAR, canvas and SOFT-EYE settings)
+## Historical recorded build (4.2.4, silent update 3 - EAR, canvas and SOFT-EYE settings)
 
 | Item | Value |
 | --- | --- |

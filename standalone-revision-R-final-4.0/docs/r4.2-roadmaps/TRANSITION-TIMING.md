@@ -1,4 +1,4 @@
-# Roadmap - Transition timing
+# HIST-4.2-01 — Roadmap: Transition Timing (design reference)
 
 4.1 gave every voice a glide or cut transition character, per-session and in-session re-rolls, per-voice timing
 jitter and a minimum gap between hard cuts. **4.1.1 "Breathing Room" shipped the first phase of this roadmap:

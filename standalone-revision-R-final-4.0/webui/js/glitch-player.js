@@ -1679,10 +1679,24 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
           }
 
           let softHudEl = null, softHudAt = 0;
+          const EAR_HUD_INTERVAL_MS = 1000 / 12;
+          let earHudAt = -Infinity;
+          const earHud = {
+              element: document.getElementById('earHud'),
+              mode: document.getElementById('earHudMode'),
+              phase: document.getElementById('earHudPhase'),
+              source: document.getElementById('earHudSrc'),
+              level: document.getElementById('earMeterLevel'),
+              bass: document.getElementById('earMeterBass'),
+              mid: document.getElementById('earMeterMid'),
+              treb: document.getElementById('earMeterTreb'),
+              build: document.getElementById('earMeterBuild')
+          };
           function softUpdateHud(now) {
-              softUpdateEarHud();
+              softUpdateEarHud(now);
               if (now - softHudAt < 260) return;
               softHudAt = now;
+              if (SOFT.paintEar) SOFT.paintEar();
               if (!softHudEl) softHudEl = document.getElementById('softEyeBtn');
               if (!softHudEl) return;
               const ph = SOFT.cresc ? SOFT.cresc.phase() : 'off';
@@ -1697,29 +1711,35 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               softHudEl.style.setProperty('--k', SOFT.k.toFixed(3));
           }
 
-          function softSetBar(id, v) {
-              const el = document.getElementById(id);
+          function softSetBar(el, v) {
               if (!el) return;
-              const w = (Math.max(0, Math.min(1, +v || 0)) * 100).toFixed(1) + '%';
-              if (el.style.width !== w) el.style.width = w;
+              const scale = Math.round(Math.max(0, Math.min(1, +v || 0)) * 1000) / 1000;
+              const transform = 'scaleX(' + scale + ')';
+              if (el.style.transform !== transform) el.style.transform = transform;
           }
-          function softUpdateEarHud() {
-              const hud = document.getElementById('earHud');
-              if (!hud) return;
+          function softUpdateEarHud(now) {
+              const hud = earHud.element;
+              if (!hud || hud.hidden || document.hidden ||
+                  !document.body.classList.contains('playback-on') ||
+                  document.documentElement.classList.contains('freeze-frame-capture') ||
+                  localMediaHeld() ||
+                  (nowPlaying.kind === 'youtube' && (!player || player.getPlayerState() !== YT.PlayerState.PLAYING))) return;
+              if (now - earHudAt < EAR_HUD_INTERVAL_MS) return;
+              earHudAt = now;
               const es = SOFT.ear ? SOFT.ear.state : null;
               const mode = SOFT.earMode || 'auto';
               const mix = SOFT.audioMix || 0;
-              hud.dataset.mode = mode;
+              if (hud.dataset.mode !== mode) hud.dataset.mode = mode;
               hud.classList.toggle('is-beat', !!(es && es.beat > 0.35));
               hud.classList.toggle('is-audio', mix > 0.5);
-              softSetBar('earMeterLevel', es && es.level);
-              softSetBar('earMeterBass', es && es.bass);
-              softSetBar('earMeterMid', es && es.mid);
-              softSetBar('earMeterTreb', es && es.treb);
-              softSetBar('earMeterBuild', es && es.build);
-              const modeEl = document.getElementById('earHudMode');
-              const phaseEl = document.getElementById('earHudPhase');
-              const srcEl = document.getElementById('earHudSrc');
+              softSetBar(earHud.level, es && es.level);
+              softSetBar(earHud.bass, es && es.bass);
+              softSetBar(earHud.mid, es && es.mid);
+              softSetBar(earHud.treb, es && es.treb);
+              softSetBar(earHud.build, es && es.build);
+              const modeEl = earHud.mode;
+              const phaseEl = earHud.phase;
+              const srcEl = earHud.source;
               const waiting = mode === 'audio' && mix < 0.25;
               if (modeEl) {
                   const t = 'EAR ' + mode.toUpperCase() + (waiting ? ' · WAIT' : '');
@@ -1735,7 +1755,6 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                   const t = 'src ' + src + ' · mix ' + mix.toFixed(2);
                   if (srcEl.textContent !== t) srcEl.textContent = t;
               }
-              if (SOFT.paintEar) SOFT.paintEar();
           }
 
           /* B&W INVERT MAP — 0 / 50 / 75 / 100 landmarks

@@ -1582,11 +1582,13 @@ body.ui-hidden #earHudShow {
 .ear-meter i {
     display: block;
     height: 100%;
-    width: 0%;
+    width: 100%;
+    transform: scaleX(0);
+    transform-origin: left;
     border-radius: 3px;
     background: linear-gradient(90deg, #7af7ff, #fff);
     box-shadow: 0 0 8px rgba(122, 247, 255, .65);
-    transition: width .14s ease-out
+    transition: transform .14s ease-out
 }
 body.hard-light .ear-meter i {
     background: linear-gradient(90deg, #ff2d55, #ffcc66)
