@@ -21,10 +21,12 @@ function readGroups() {
 
 const groups = readGroups();
 const NEW_GROUPS = ['prismDrift', 'moonlightVeil', 'glyphRainfall', 'crtDaydream'];
+const PHASE4_GROUPS = ['r3Aurora', 'r3CyberGrid', 'r3TapeBroadcast', 'r3PrismMatrix', 'temporalRift', 'orbitalSignal'];
 
-test('the beautiful effects palette holds 16 curated groups including the R4.1.1 four', () => {
-    assert.equal(Object.keys(groups).length, 16);
+test('the beautiful effects palette holds 22 curated groups including the R4.1.1 four and the Phase 4 six', () => {
+    assert.equal(Object.keys(groups).length, 22);
     for (const key of NEW_GROUPS) assert.ok(groups[key], key);
+    for (const key of PHASE4_GROUPS) assert.ok(groups[key], key);
 });
 
 test('every palette group names only real voices and keeps its ranges ordered inside 0..1', () => {
@@ -53,4 +55,28 @@ test('the four R4.1.1 groups are light-free and rest long enough to breathe', ()
         assert.ok(g.holdMs[0] >= 2000, key + ' holds its scene calmly');
         assert.ok(g.peakRange[1] <= 0.9, key + ' peaks below full blast');
     }
+});
+
+test('the Phase 4 six are light-free, calm, and never peak at full blast', () => {
+    for (const key of PHASE4_GROUPS) {
+        const g = groups[key];
+        for (const name of g.effects) {
+            const base = name.replace(/^R3 /, '');
+            assert.ok(base !== 'Flash' && base !== 'Strobe', key + ' stays light-free');
+        }
+        assert.ok(g.restMs[0] >= 5000, key + ' rests at least five seconds');
+        assert.ok(g.holdMs[0] >= 2000, key + ' holds its scene calmly');
+        assert.ok(g.peakRange[1] <= 0.9, key + ' peaks below full blast');
+    }
+});
+
+test('every R3 voice and every AI-Warp voice sings in at least one curated group', () => {
+    const covered = new Set();
+    for (const g of Object.values(groups)) for (const name of g.effects) covered.add(name);
+    const r3Voices = [...voiceIds].filter((id) => id.startsWith('R3 '));
+    assert.equal(r3Voices.length, 17, 'seventeen R3 voices in the manifest');
+    for (const name of r3Voices) assert.ok(covered.has(name), 'R3 coverage: ' + name);
+    const warpVoices = ['Chromatic Echo', 'Temporal Slices', 'Signal Tear', 'Cyber Rain',
+        'Prism Rift', 'Orbit HUD', 'Rolling Scan', 'Tape Grain', 'Tracking Tear'];
+    for (const name of warpVoices) assert.ok(covered.has(name), 'AI-Warp coverage: ' + name);
 });

@@ -2876,9 +2876,24 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               engine.motionScale = clamp01(masterControls.motionScale);
               engine.blendSoftness = clamp01(masterControls.blendSoftness);
               engine.aiWarpActive = isAiWarpActive;
+              /* Phase 4 (FS-05): the R3 bank reads the real warp mode so all 30
+                 WARP_BLEND characters reach Ghost/V-Sync; 'aurora' is the calm
+                 default while the warp is off. */
+              engine.aiWarpMode = isAiWarpActive ? currentAiWarpMode : 'aurora';
               engine.aiWarpHue = videoPalette.hue;
               engine.softEyeK = softK();
-              engine.audioDrive = { beat: clamp01(SOFT.beat), drive: clamp01(videoPalette.energy) };
+              /* Phase 4 (FS-05): real EAR dynamics — bass / mid / treble — so the
+                 R3 voices react to what is actually heard (or seen, in canvas
+                 mode); the drive falls back to the video palette's energy. */
+              const earState = SOFT.ear ? SOFT.ear.state : null;
+              engine.audioDrive = {
+                  beat: clamp01(SOFT.beat),
+                  bass: clamp01(earState && earState.active ? earState.bass : 0),
+                  mid: clamp01(earState && earState.active ? earState.mid : 0),
+                  treb: clamp01(earState && earState.active ? earState.treb : 0),
+                  drive: clamp01((earState && earState.active && earState.level) ?
+                      earState.level : videoPalette.energy)
+              };
               engine.isAutoGlitch = isAutoGlitching;
               engine.isContinualRandom = isContinuallyRandomizing;
               engine.isAutomatedMasters = isAutomatedMasters;
@@ -5504,8 +5519,13 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
 
           function updateSmoothedStrengths(dt) {
               let settling = false;
+              /* Phase 4 (VA-02): Auto Glitch's transient modulation lives HERE,
+                 folded into the one smoothed strength every renderer reads —
+                 rhythmic (autoGlitchPulse), proportional to Auto Glitch Power,
+                 and later multiplied by Effect Intensity in `raw` below. No
+                 parallel factory instance bank exists anymore. */
               const glitchBoost = isAutoGlitching ? (1 + (0.08 + 0.35 * clamp01(masterControls.autoGlitchPower)) * (
-                  autoGlitchLevel || 0)) : 1;
+                  autoGlitchLevel || 0) * (0.82 + 0.18 * autoGlitchPulse(performance.now()))) : 1;
               const mode = (typeof randBehavior === 'string' ? randBehavior : 'smooth');
               const blendTempo = {
                   smooth: 0.82,
@@ -5542,13 +5562,22 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
           timedEffectsDefs.forEach((d) => { timedEffectDefByName[d.name] = d; });
 
           function effectLiveStrength(name) {
+              /* Phase 4 (VA-03): Global Opacity at 0 guarantees a clean source
+                 frame — even Trigger pulses and settling smoothed copies paint
+                 nothing until the user raises it again. */
+              const op = Math.max(0, +masterOpacity || 0);
+              if (op <= 0.001) return 0;
               const a = +(effectAlphas[name] || 0);
               /* Phase 3 (FS-01): a manual Trigger rides a transient envelope that
                  decays to 0 — it never touches effectAlphas. */
               const pulse = timedPulseLevel(name);
               if (a <= 0 && pulse <= 0) return 0;
               const intensity = masterControls ? Math.max(0.05, +masterControls.effectIntensity || 1) : 1;
-              const live = Math.max(a, pulse) * Math.max(0, +masterOpacity || 0) * intensity;
+              /* Phase 4 (VA-03): the pulse floor is master-scaled, so Global
+                 Opacity and Effect Intensity shape a Trigger like a held slider. */
+              const pulseFloor = pulse * op *
+                  (0.35 + 0.65 * clamp01(masterControls ? +masterControls.effectIntensity || 0 : 1));
+              const live = Math.max(a * op * intensity, pulseFloor);
               const sm = smoothedStrength[name];
               const level = Math.min(lightCap(name), (sm === undefined) ? live : Math.max(+sm || 0, live));
               return isManualLight(name) ? level * lightOutputGate() : level;
@@ -6670,15 +6699,23 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
           }
 
           function stepBwSweep(now) {
-              // Respect the user: locked slider, cancelled effect or no playback → never sweep.
+              // Respect the user: locked slider, locked B&W voice-FX, cancelled
+              // effect or no playback → never sweep.
               // R4.2.4: a cancelled B&W (slider to zero or ZERO ALL) can never be swept awake.
-              if (sliderLocks['B&W Invert'] || isEffectCancelled('B&W Invert') ||
+              if (sliderLocks['B&W Invert'] || voiceFxLocks.bwInvert || isEffectCancelled('B&W Invert') ||
                   !document.body.classList.contains('playback-on')) {
                   if (bwSweep.active) bwSweepStandDown(now);
                   else if (now >= bwSweep.nextAt) bwSweepScheduleNext(now);
                   return;
               }
               if (!bwSweep.active) {
+                  /* Phase 4 (VA-05): automatic sweeps are an automation flourish —
+                     with no automation running the board stays exactly where the
+                     user put it. */
+                  if (!(isContinuallyRandomizing || isAutoGlitching || isAutomatedMasters)) {
+                      if (now >= bwSweep.nextAt) bwSweepScheduleNext(now);
+                      return;
+                  }
                   if (now < bwSweep.nextAt) return;
                   bwSweep.active = true;
                   bwSweepActive = true;
@@ -7575,8 +7612,33 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               });
           }
 
-          const AI_WARP_MODES = ['liquid', 'prism', 'breathe', 'fold', 'aurora'];
+          /* Phase 4 (FS-05): the full R3GhostVsync.WARP_BLEND mode set is in
+             play. 'ai_zero' is the engine's parked sentinel and stays out of the
+             rotation; the legacy five ('liquid', 'prism', 'breathe', 'fold',
+             'aurora') remain valid keys of the real set, so old presets and
+             saved states keep working unchanged. */
+          const AI_WARP_MODES = (window.R3GhostVsync && Array.isArray(window.R3GhostVsync.warpModes) ?
+              window.R3GhostVsync.warpModes : ['liquid', 'prism', 'breathe', 'fold', 'aurora'])
+              .filter((k) => k !== 'ai_zero');
+          /* The SVG-filter side of the warp leans on one of five motion
+             archetypes per mode; the R3 engine reads the exact key itself. */
+          const AI_WARP_ARCHETYPE = {
+              liquid: 'liquid', ripple: 'liquid', newblue_water_drop: 'liquid',
+              newblue_wiggle: 'liquid', newblue_fish_eye: 'liquid', newblue_roll: 'liquid',
+              prism: 'prism', kaleidoscope: 'prism', quantum: 'prism',
+              newblue_rgb_shift: 'prism', newblue_quad_mirror: 'prism',
+              newblue_solarize: 'prism', newblue_neon_edges: 'prism',
+              breathe: 'breathe', analog_crt: 'breathe', newblue_light_ring: 'breathe',
+              newblue_cathode_beam: 'breathe', newblue_pinch: 'breathe',
+              fold: 'fold', vortex: 'fold', cybergrid: 'fold', newblue_shear: 'fold',
+              newblue_twirl: 'fold', newblue_video_tile: 'fold', newblue_earthquake: 'fold',
+              aurora: 'aurora', hyperdrive: 'aurora', newblue_zoom_blur: 'aurora',
+              newblue_active_cam: 'aurora'
+          };
           let aiWarpMode = 'liquid';
+          /* Phase 4 (FS-05): module-scope mirror read by syncR3Engine (and the
+             Phase 5 MilkDrop blend) — always the mode updateAiWarp last chose. */
+          let currentAiWarpMode = aiWarpMode;
           let aiWarpModeUntil = 0;
           let aiWarpSeed = Math.random() * 1000;
           const aiWarpState = {
@@ -7596,12 +7658,14 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
           };
 
           function pickAiWarpMode(now) {
-              const roll = Math.random();
-              if (roll < 0.28) return 'liquid';
-              if (roll < 0.48) return 'prism';
-              if (roll < 0.68) return 'breathe';
-              if (roll < 0.84) return 'fold';
-              return 'aurora';
+              if (!AI_WARP_MODES.length) return 'aurora';
+              /* uniform draw over the full 29-mode rotation; nudge away from an
+                 immediate repeat so shifts stay readable */
+              let next = AI_WARP_MODES[(Math.random() * AI_WARP_MODES.length) | 0];
+              if (next === aiWarpMode && AI_WARP_MODES.length > 1) {
+                  next = AI_WARP_MODES[(Math.random() * AI_WARP_MODES.length) | 0];
+              }
+              return next;
           }
 
           function updateAiWarp(now) {
@@ -7626,8 +7690,11 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                   aiWarpModeUntil = now + 6000 + Math.random() * 9000;
                   aiWarpSeed = Math.random() * 1000;
               }
+              currentAiWarpMode = aiWarpMode;
 
-              const mode = aiWarpMode;
+              /* the exact WARP_BLEND key drives the R3 engine; the SVG filter
+                 follows the mode's motion archetype */
+              const mode = AI_WARP_ARCHETYPE[aiWarpMode] || 'aurora';
               let tDisp = 2,
                   tFreq = 0.001,
                   tPulse = 0.3,
@@ -7736,7 +7803,9 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                       ['Data Bands', 'VHS Glitch', 'Scanlines', 'ASCII', 'Matrix ASCII'] :
                       ['Neon Grad', 'Scanlines', 'Font Burn', 'HSL Rainbow', 'Matrix Chord'];
                   const name = moodPool[(Math.random() * moodPool.length) | 0];
-                  if (name && !automationHeld(name) && blendProfiles[name]) {
+                  /* Phase 4 (VA-04): the warp's mood accents never raise a locked
+                     or cancelled voice. */
+                  if (name && !automationHeld(name) && !isEffectCancelled(name) && blendProfiles[name]) {
                       const p = blendProfiles[name];
                       const tgt = p.ambient[0] + Math.random() * (p.ambient[1] - p.ambient[0] + 0.02);
                       effectAlphas[name] = (effectAlphas[name] || 0) * 0.70 + tgt * 0.30;
@@ -8628,6 +8697,8 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
 
           function autoGlitchUnpark(now) {
               if (isContinuallyRandomizing || !isAutoGlitching || now < nextUnparkAt) return;
+              /* Phase 4 (VA-01): a board at Global Opacity 0 is never woken. */
+              if (masterOpacity <= 0.001) return;
               nextUnparkAt = now + 1400 + Math.random() * 3200;
               const parked = profileNames.filter((n) =>
                   !automationHeld(n) && !isEffectCancelled(n) && (effectAlphas[n] || 0) < PARKED_EPSILON);
@@ -8673,6 +8744,14 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               }
           }
 
+          /* Phase 4 (VA-02): Auto Glitch owns no parallel instance bank anymore.
+             Its rhythmic boost for ACTIVE voices is folded into glitchBoost
+             (updateSmoothedStrengths → effectLiveStrength), parked uncancelled
+             voices are woken only through autoGlitchUnpark (which raises the
+             visible slider), and one-shot sparks are tracked per voice below so
+             an R3 runner is never stepped twice in one frame. */
+          const autoGlitchSparks = {};
+
           function autoGlitchStep(now, dt) {
               const target = isAutoGlitching ? 1 : 0;
               autoGlitchLevel = easeExp(autoGlitchLevel, target, dt, AUTO_GLITCH_EASE_RATE);
@@ -8680,45 +8759,31 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               autoGlitchUnpark(now);
               autoGlitchBwDrive(now);
 
-              if (isAutoGlitching && autoGlitchInstances.length === 0) {
-                  timedEffectsDefs.forEach((def) => {
-                      if (isManualLight(def.name)) return;
-                      /* VA-01 fix: never create an instance for cancelled or locked voices */
-                      if (isEffectCancelled(def.name)) return;
-                      if (automationHeld(def.name)) return;
-                      const profile = blendProfiles[def.name];
-                      const ceiling = profile ? profile.peak[1] : 0.25;
-                      const getStrength = () => {
-                          if (autoGlitchLevel <= 0) return 0;
-                          if (isEffectCancelled(def.name)) return 0;
-                          if (automationHeld(def.name)) return 0;
-                          if (masterOpacity <= 0.001) return 0;
-                          const base = smoothedStrength[def.name] || ((effectAlphas[def.name] || 0) *
-                              masterOpacity);
-                          /* VA-01 fix: headroom was inverted — a base of 0 gave 1.0 (full blast).
-                             Now voices already active get rhythmic modulation; parked/zeroed
-                             voices only contribute through autoGlitchUnpark raising their slider. */
-                          if (base < PARKED_EPSILON) return 0;
-                          const headroom = 1 - clamp01(base) * 0.75;
-                          const extra = 0.82 + 0.18 * autoGlitchPulse(performance.now());
-                          return Math.min(0.72, autoGlitchLevel * ceiling * autoGlitchPulse(
-                              performance.now()) * headroom * extra * clamp01(masterControls
-                              .autoGlitchPower) * (0.78 + 0.40 * clamp(videoPalette.energy, 0, 1)));
-                      };
-                      const fn = def.factory(getStrength, true);
-                      autoGlitchInstances.push(fn);
-                      activeEffects.push(fn);
-                  });
-              } else if (!isAutoGlitching && autoGlitchLevel <= 0 && autoGlitchInstances.length > 0) {
+              /* R3 singleton guard: drain any stale parallel instances, and retire
+                 a spark the moment its voice gains a continuous runner (or its
+                 timed window ends), so continuousEffectCache[name] is the single
+                 factory step per voice per frame. */
+              if (autoGlitchInstances.length > 0) {
                   autoGlitchInstances.forEach((fn) => {
                       const i = activeEffects.indexOf(fn);
                       if (i > -1) activeEffects.splice(i, 1);
                   });
                   autoGlitchInstances.length = 0;
               }
+              timedEffectsDefs.forEach((def) => {
+                  if (isManualLight(def.name)) return;
+                  const spark = autoGlitchSparks[def.name];
+                  if (!spark) return;
+                  const at = activeEffects.indexOf(spark);
+                  if (continuousEffectCache[def.name] && at > -1) activeEffects.splice(at, 1);
+                  if (continuousEffectCache[def.name] || at === -1) delete autoGlitchSparks[def.name];
+              });
 
               if (isAutoGlitching && !isContinuallyRandomizing && now >= nextSparkAt) {
-                  if (activeEffects.length < 40) {
+                  if (masterOpacity <= 0.001) {
+                      /* VA-01: a zeroed board sparks nothing */
+                      nextSparkAt = now + 1600;
+                  } else if (activeEffects.length < 40) {
                       nextSparkAt = now + (1600 + Math.random() * 2600) *
                           (1.15 - 0.30 * clamp(videoPalette.energy, 0, 1) - 0.10 * srcMotionK()) *
                           lerp(GlitchEngine.SOFT_EYE.pace.sparkK, 0.9, softK());
@@ -8727,13 +8792,22 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                       if (def && !softWild() && GlitchEngine.SOFT_EYE.lightVoices.indexOf(def.name) !== -1) {
                           def = timedEffectsDefs.find((d) => d.name === 'Neon Grad') || def;
                       }
-                      /* VA-01 fix: sparks also respect cancellation and locks */
+                      /* VA-01 fix: sparks also respect cancellation and locks, and
+                         VA-02: never double a voice that is already running. */
                       if (def && !isManualLight(def.name)) {
-                          if (!isEffectCancelled(def.name) && !automationHeld(def.name)) {
+                          if (!isEffectCancelled(def.name) && !automationHeld(def.name) &&
+                              !continuousEffectCache[def.name] && !autoGlitchSparks[def.name]) {
                               const p = blendProfiles[def.name];
                               const floor = p ? p.peak[1] * 0.75 : 0.32;
-                              activeEffects.push(def.factory(() => Math.min(0.75, floor * (0.55 + Math.random() *
-                                  0.45))));
+                              const sparkName = def.name;
+                              const fn = def.factory(() => {
+                                  if (masterOpacity <= 0.001) return 0;
+                                  if (isEffectCancelled(sparkName) || automationHeld(sparkName)) return 0;
+                                  return Math.min(0.75, floor * (0.55 + Math.random() * 0.45)) *
+                                      masterOpacity * (0.35 + 0.65 * clamp01(masterControls.effectIntensity));
+                              });
+                              autoGlitchSparks[sparkName] = fn;
+                              activeEffects.push(fn);
                           }
                       }
                   } else {
@@ -9007,7 +9081,14 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               isAutoGlitching = false;
               isAutomatedMasters = false;
               setLightAutomation(false);
+              /* Phase 4 (VA-06): the lights land at a true 0 — levels, stored
+                 levels and wander targets — while their lock flags are kept. */
+              setLightLevelNow('Flash', 0);
+              setLightLevelNow('Strobe', 0);
               setMilkActive(false);
+              /* Phase 4 (VA-06): HARD LIGHT is a session toggle until Phase 6 —
+                 ZERO ALL turns it off through its own synced switch. */
+              setHardLight(false);
               /* VA-05 fix: zero Ghost, VSync, AI Warp */
               if (typeof isAiWarpActive !== 'undefined') { isAiWarpActive = false; }
               if (typeof ghostModeIndex !== 'undefined') { ghostModeIndex = 0; }
@@ -9054,6 +9135,8 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                   if (i > -1) activeEffects.splice(i, 1);
               });
               autoGlitchInstances.length = 0;
+              /* Phase 4 (VA-06): drop the per-voice Auto Glitch spark registry too */
+              for (const k in autoGlitchSparks) delete autoGlitchSparks[k];
               /* VA-05 fix: clear ALL active effects, not just auto-glitch instances */
               activeEffects.length = 0;
               /* Phase 3 (FS-01): kill one-shot Trigger pulses and their deduped
@@ -9075,6 +9158,9 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               if (ghostBtn) ghostBtn.textContent = 'GHOST PROTOCOL: OFF';
               const vsyncBtn = $('vsyncScanBtn');
               if (vsyncBtn) vsyncBtn.textContent = 'V-SYNC: OFF';
+              /* Phase 4 (VA-06): with the warp off, park its SVG displacement at
+                 once — updateAiWarp's inactive branch resets the filter. */
+              try { updateAiWarp(performance.now()); } catch (e) {}
 
               // 9. Apply the zeroed filter chain immediately
               applyMasterFilters();
@@ -9224,6 +9310,10 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
           SUGGESTED.forEach(([id, url]) => {
               bindSuggestedStart($(id), url, id === 'suggestedPlaylist' || id === 'suggestedMoonlight' || id === 'suggestedDarksynth' || id === 'suggestedBirdcage');
           });
+          /* Phase 4 (VA-06): programmatic HARD-LIGHT switch — assigned by
+             bindHardLight below so ZERO ALL can stand the toggle down through
+             the same label/class sync as a click. First-class state is Phase 6. */
+          let setHardLight = function () {};
           (function bindHardLight() {
               const btn = document.getElementById('hardLightBtn');
               if (!btn) return;
@@ -9232,6 +9322,12 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                   document.body.classList.toggle('hard-light', on);
                   btn.classList.toggle('active', on);
                   btn.textContent = on ? 'HARD-LIGHT: ON' : 'HARD-LIGHT: OFF';
+                  btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+              };
+              setHardLight = (next) => {
+                  if (on === !!next) return;
+                  on = !!next;
+                  sync();
               };
               btn.addEventListener('click', () => { on = !on; sync(); });
               sync();
@@ -10856,6 +10952,61 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                   dipRange:  [0.04, 0.15],
                   dipMs:     [600, 1300],
                   restMs:    [5500, 10500]
+              },
+              r3Aurora: {
+                  // Phase 4 — R3 aurora wash: twin neon/rainbow/hue over the ghost spectrum (no lights)
+                  effects:   ['R3 Neon Grad', 'R3 HSL Rainbow', 'R3 Hue/Color Cycle', 'R3 Ghost Spectrum'],
+                  peakRange: [0.45, 0.85],
+                  holdMs:    [2600, 5200],
+                  dipRange:  [0.04, 0.14],
+                  dipMs:     [600, 1400],
+                  restMs:    [6000, 11000]
+              },
+              r3CyberGrid: {
+                  // Phase 4 — R3 glyph lattice: the matrix twins, ascii, ink and tech (no lights)
+                  effects:   ['R3 Matrix ASCII', 'R3 Matrix Chord', 'R3 ASCII', 'R3 Ink Glyphs', 'R3 Tech Artist'],
+                  peakRange: [0.45, 0.85],
+                  holdMs:    [2600, 5400],
+                  dipRange:  [0.05, 0.16],
+                  dipMs:     [600, 1400],
+                  restMs:    [5500, 10500]
+              },
+              r3TapeBroadcast: {
+                  // Phase 4 — R3 broadcast weather: tape/data twins under the v-sync scan (no lights)
+                  effects:   ['R3 VHS Glitch', 'R3 Data Bands', 'R3 Scanlines', 'R3 Data Bomb', 'R3 V-Sync'],
+                  peakRange: [0.42, 0.82],
+                  holdMs:    [2400, 5000],
+                  dipRange:  [0.04, 0.14],
+                  dipMs:     [600, 1300],
+                  restMs:    [6000, 11000]
+              },
+              r3PrismMatrix: {
+                  // Phase 4 — R3 prism matrix: burn + bomb over the R3 dia/hue rails (no lights)
+                  effects:   ['R3 Font Burn', 'R3 Gemini Bomb', 'R3 B&W Invert', 'R3 Hue/Color Cycle'],
+                  suppress:  ['Flash', 'Strobe'],
+                  peakRange: [0.40, 0.80],
+                  holdMs:    [2400, 5000],
+                  dipRange:  [0.03, 0.13],
+                  dipMs:     [600, 1300],
+                  restMs:    [6500, 12000]
+              },
+              temporalRift: {
+                  // Phase 4 — AI-Warp time rift: sliced frames refract through the prism (no lights)
+                  effects:   ['Temporal Slices', 'Prism Rift', 'Chromatic Echo', 'Tracking Tear'],
+                  peakRange: [0.45, 0.85],
+                  holdMs:    [2400, 5000],
+                  dipRange:  [0.04, 0.15],
+                  dipMs:     [600, 1400],
+                  restMs:    [5500, 10500]
+              },
+              orbitalSignal: {
+                  // Phase 4 — AI-Warp orbital telemetry: HUD + torn signal in the cyber rain (no lights)
+                  effects:   ['Orbit HUD', 'Signal Tear', 'Cyber Rain', 'Rolling Scan'],
+                  peakRange: [0.45, 0.85],
+                  holdMs:    [2200, 4800],
+                  dipRange:  [0.04, 0.15],
+                  dipMs:     [600, 1300],
+                  restMs:    [5500, 10500]
               }
           };
 
@@ -10981,6 +11132,9 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                              manual lights — Flash / Strobe belong to the wander only. */
                           if (isManualLight(name)) return;
                           if (automationHeld(name)) return;
+                          if (isEffectCancelled(name)) return; // Phase 4 (VA-04): cancelled stays off through the release
+                          if (!isAutoGlitching && crParked[name] &&
+                              (effectAlphas[name] || 0) < PARKED_EFFECT_EPSILON) return; // Phase 4: parked stays parked
                           const profile = blendProfiles[name];
                           randomTargets[name] = profile
                               ? randRange(profile.ambient)

@@ -87,3 +87,82 @@ test('MACHINE decks are determined by one reproducible seed', () => {
     assert.ok(player.includes('function buildMachinePresets(seedOverride)'), 'the builder accepts a seed');
     assert.ok(player.includes('buildMachinePresets.lastSeed = seed;'), 'the deck seed is recorded');
 });
+
+/* ------------------------- Phase 4 exit criteria ------------------------- */
+
+test('Phase 4: Auto Glitch sparks and wakes respect cancellation, locks and a zeroed Global Opacity', () => {
+    const step = player.slice(player.indexOf('function autoGlitchStep('), player.indexOf('function randomizeBoard('));
+    assert.ok(step.includes('!isEffectCancelled(def.name) && !automationHeld(def.name) &&'),
+        'spark creation skips cancelled and locked voices');
+    assert.ok(step.includes('!continuousEffectCache[def.name] && !autoGlitchSparks[def.name]'),
+        'a running voice is never doubled by a spark');
+    assert.ok(step.includes('if (masterOpacity <= 0.001) {'), 'a zeroed board sparks nothing');
+    assert.ok(step.includes('if (isEffectCancelled(sparkName) || automationHeld(sparkName)) return 0;'),
+        'a live spark falls silent the moment its voice is cancelled or locked');
+    const unpark = player.slice(player.indexOf('function autoGlitchUnpark('), player.indexOf('function autoGlitchPulse('));
+    assert.ok(unpark.includes('if (masterOpacity <= 0.001) return;'),
+        'unpark never wakes a board at Global Opacity 0');
+});
+
+test('Phase 4: an R3 factory steps once per frame — the parallel Auto Glitch instance bank is retired', () => {
+    const step = player.slice(player.indexOf('function autoGlitchStep('), player.indexOf('function randomizeBoard('));
+    assert.ok(!step.includes('autoGlitchInstances.push'), 'autoGlitchStep never creates parallel instances');
+    assert.ok(step.includes('if (continuousEffectCache[def.name] && at > -1) activeEffects.splice(at, 1);'),
+        'a spark stands down when its voice gains a continuous runner');
+    assert.ok(player.includes('autoGlitchLevel || 0) * (0.82 + 0.18 * autoGlitchPulse(performance.now()))'),
+        "Auto Glitch's rhythmic boost is folded into the one smoothed strength (glitchBoost)");
+});
+
+test("Phase 4: the burst release ('dip' exit) skips cancelled and parked voices too", () => {
+    const at = player.indexOf("} else { // 'dip'");
+    assert.ok(at > 0, 'dip exit found');
+    const release = player.slice(at, player.indexOf('aestheticBurstLocked = new Set();', at));
+    assert.ok(release.includes('if (isManualLight(name)) return;'), 'lights stay with the wander');
+    assert.ok(release.includes('if (isEffectCancelled(name)) return;'), 'cancelled voices are never re-targeted');
+    assert.ok(release.includes('if (!isAutoGlitching && crParked[name] &&'), 'parked voices stay parked');
+});
+
+test('Phase 4: ZERO ALL halts preset auto, AI warp, ghost, v-sync, milk, hard light, lights, sparks and the SOFT engine', () => {
+    const zero = player.slice(player.indexOf('function zeroAllEffects()'), player.indexOf("if ($('zeroAllBtn'))"));
+    for (const needle of [
+        'togglePresetAuto();',
+        "setLightLevelNow('Flash', 0);",
+        "setLightLevelNow('Strobe', 0);",
+        'setMilkActive(false);',
+        'setHardLight(false);',
+        'isAiWarpActive = false;',
+        'ghostModeIndex = 0;',
+        'vsyncModeIndex = 0;',
+        'SOFT.cresc.calmNow();',
+        'SOFT.gate.reset();',
+        'activeEffects.length = 0;',
+        'delete autoGlitchSparks[k];',
+        'delete timedActiveMap[k];'
+    ]) assert.ok(zero.includes(needle), 'ZERO ALL does: ' + needle);
+});
+
+test('Phase 4: Global Opacity 0 silences even a live Trigger pulse on the very next read', () => {
+    const start = player.indexOf('          function effectLiveStrength(name) {');
+    assert.ok(start > 0, 'effectLiveStrength found');
+    const end = player.indexOf('\n          }', start) + '\n          }'.length;
+    const context = vm.createContext({
+        masterOpacity: 1,
+        masterControls: { effectIntensity: 1 },
+        effectAlphas: {},
+        smoothedStrength: {},
+        timedPulseLevel: () => 0.4,
+        lightCap: () => Infinity,
+        isManualLight: () => false,
+        clamp01: (v) => Math.min(1, Math.max(0, v))
+    });
+    vm.runInContext(player.slice(start, end) + '\nglobalThis.live = effectLiveStrength;', context);
+    assert.ok(context.live('ASCII') > 0, 'a pulse paints while opacity is up');
+    context.masterOpacity = 0;
+    assert.equal(context.live('ASCII'), 0, 'opacity 0 is an immediate clean frame');
+    context.masterOpacity = 0.001;
+    assert.equal(context.live('ASCII'), 0, 'the <= 0.001 guard holds');
+    context.masterOpacity = 1;
+    context.smoothedStrength.ASCII = 0.5;
+    context.masterOpacity = 0;
+    assert.equal(context.live('ASCII'), 0, 'a settling smoothed copy cannot leak past opacity 0');
+});

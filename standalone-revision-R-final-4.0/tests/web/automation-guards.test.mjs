@@ -215,3 +215,48 @@ test('a board held back by its GPU stops probing the faster tier, and a lighter 
     assert.deepEqual({ ...gov.board(100, lighter) }, { tier: 0, ups: 1, pace: 1 }, 'clearly less work restores the usual wait');
     assert.deepEqual({ ...gov.board(5000, lighter) }, { tier: 0, ups: 0, pace: 1 });
 });
+
+/* ------------------------- Phase 4 exit criteria ------------------------- */
+
+test('the automatic B&W sweep needs a live automation and stands down for either B&W lock', () => {
+    const sweep = functionBody('stepBwSweep');
+    assert.match(sweep, /sliderLocks\['B&W Invert'\] \|\| voiceFxLocks\.bwInvert \|\| isEffectCancelled\('B&W Invert'\)/,
+        'the hand lock, the AI-WARP voice-FX lock and the cancellation latch all stand the sweep down');
+    assert.match(sweep, /if \(!\(isContinuallyRandomizing \|\| isAutoGlitching \|\| isAutomatedMasters\)\) \{/,
+        'no automation running means no sweep is scheduled or started');
+});
+
+test('all 30 AI-Warp modes come from the R3 engine, and legacy mode names stay valid', () => {
+    const vsync = readWeb('js/r3-ghost-vsync.js');
+    const blendAt = vsync.indexOf('const WARP_BLEND = {');
+    const blendEnd = vsync.indexOf('};', blendAt);
+    const keys = [...vsync.slice(blendAt, blendEnd).matchAll(/^\s{8}([a-z0-9_]+):\s*\[/gm)].map((m) => m[1]);
+    assert.equal(keys.length, 30, 'thirty WARP_BLEND modes');
+    assert.match(vsync, /warpModes: Object\.freeze\(Object\.keys\(WARP_BLEND\)\)/, 'the engine exports its real key set');
+    assert.match(player, /const AI_WARP_MODES = \(window\.R3GhostVsync && Array\.isArray\(window\.R3GhostVsync\.warpModes\)/,
+        'the player derives the rotation from the engine');
+    assert.match(player, /\.filter\(\(k\) => k !== 'ai_zero'\)/, "the parked sentinel 'ai_zero' stays out of the rotation");
+    for (const legacy of ['liquid', 'prism', 'breathe', 'fold', 'aurora']) {
+        assert.ok(keys.includes(legacy), 'legacy mode stays a valid key: ' + legacy);
+    }
+    const archAt = player.indexOf('const AI_WARP_ARCHETYPE = {');
+    assert.ok(archAt > 0, 'archetype map exists');
+    const archSrc = player.slice(archAt, player.indexOf('};', archAt) + 2);
+    const context = vm.createContext({});
+    vm.runInContext(archSrc + '\nglobalThis.arch = AI_WARP_ARCHETYPE;', context);
+    for (const key of keys.filter((k) => k !== 'ai_zero')) {
+        assert.ok(['liquid', 'prism', 'breathe', 'fold', 'aurora'].includes(context.arch[key]),
+            'every rotation mode maps to a motion archetype: ' + key);
+    }
+});
+
+test('syncR3Engine hands the R3 bank the live warp mode and real EAR bass/mid/treble dynamics', () => {
+    const sync = functionBody('syncR3Engine');
+    assert.match(sync, /engine\.aiWarpMode = isAiWarpActive \? currentAiWarpMode : 'aurora';/);
+    assert.match(sync, /bass: clamp01\(earState && earState\.active \? earState\.bass : 0\)/);
+    assert.match(sync, /mid: clamp01\(earState && earState\.active \? earState\.mid : 0\)/);
+    assert.match(sync, /treb: clamp01\(earState && earState\.active \? earState\.treb : 0\)/);
+    assert.match(sync, /drive: clamp01\(\(earState && earState\.active && earState\.level\) \?\s*earState\.level : videoPalette\.energy\)/);
+    assert.match(functionBody('updateAiWarp'), /currentAiWarpMode = aiWarpMode;/,
+        'the module-scope mode mirror follows every shift');
+});

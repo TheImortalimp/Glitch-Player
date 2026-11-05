@@ -617,6 +617,6 @@
         };
     }
 
-    root.R3GhostVsync = { create, getWarpBlendProfile: warpBlendFor };
+    root.R3GhostVsync = { create, getWarpBlendProfile: warpBlendFor, warpModes: Object.freeze(Object.keys(WARP_BLEND)) };
 })(typeof window !== 'undefined' ? window : this);
 
