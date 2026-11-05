@@ -1338,7 +1338,9 @@ html, body {
         radial-gradient(ellipse at 80% 90%, rgba(255, 43, 214, 0.08), transparent 42%),
         repeating-linear-gradient(0deg, transparent 0 3px, rgba(122, 247, 255, 0.04) 3px 4px);
     mix-blend-mode: soft-light;
-    opacity: .85;
+    /* Phase 6: --moon-veil-k (0..1, set by the player) scales the veil with
+       Global Opacity and Soft-Eye calm; the default 1 keeps the classic look. */
+    opacity: calc(0.85 * var(--moon-veil-k, 1));
 }
 #rev3-mark {
     position: fixed;
@@ -1359,7 +1361,7 @@ html, body {
 body.playback-on #rev3-mark { opacity: .1; }
 body.hard-light #moon-veil {
     mix-blend-mode: overlay;
-    opacity: 1;
+    opacity: var(--moon-veil-k, 1);
     background:
         radial-gradient(ellipse at 50% 20%, rgba(255, 204, 102, 0.22), transparent 50%),
         radial-gradient(ellipse at 20% 80%, rgba(255, 43, 214, 0.16), transparent 45%),

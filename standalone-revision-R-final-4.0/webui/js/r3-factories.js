@@ -2803,7 +2803,7 @@
             motion: clamp01((p.motion == null ? 0.1 : p.motion) * blend.canvas),
             darkness: clamp01(p.darkness == null ? 1 - brightness : p.darkness)
         };
-        comboProfile = { glowMult: 0.9 + videoPalette.energy * 0.25, satMult: 1, contrastMult: 1 };
+        comboProfile = { glowMult: (0.9 + videoPalette.energy * 0.25) * (engine.hardLight ? 0.82 : 1), satMult: 1, contrastMult: 1 };
         SOFT.k = clamp01((engine.softEyeK == null ? 1 : (Number.isFinite(engine.softEyeK) ? engine.softEyeK : 1)) * blend.softEye);
         SOFT.beat = clamp01(((engine.audioDrive || {}).beat || 0) * blend.ear);
         beat = SOFT.beat;

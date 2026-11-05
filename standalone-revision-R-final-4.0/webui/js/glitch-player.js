@@ -481,8 +481,8 @@
              normalization (which keeps only known lock keys). 'glyphBank' is
              the Phase 1 glyph-table hard lock (presets, preset auto,
              Randomize All, Random Seed and Glyph Auto all respect it).
-             'hardLight' holds the Hard Light toggle against presets (the
-             dedicated lock button arrives with first-class state in Phase 6). */
+             'hardLight' holds the Hard Light toggle against presets, preset
+             auto and ZERO ALL (Phase 6: shift-click the HARD-LIGHT button). */
           const sliderLocks = { global: false, glyphBank: false, hardLight: false };
           /* Locks switched on by the last applied preset. Those are released by
              the next preset; locks the user set by hand are hard and survive. */
@@ -492,6 +492,11 @@
               sliderLocks[key] = !sliderLocks[key];
               return sliderLocks[key];
           }
+          /* Phase 6: HARD LIGHT is first-class module state. Everything — the
+             button, presets, ZERO ALL, the R3 engine and MilkDrop — reads and
+             writes it through setHardLight; a fresh install defaults to OFF
+             and a manual toggle persists to localStorage ('glitch-hard-light'). */
+          let isHardLightActive = false;
           const sliderElements = {};
           const sliderWritten = {};
           const masterControls = {
@@ -1530,6 +1535,20 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
 
           function softK() { return SOFT.ok ? SOFT.k01() : 1; }
           function softWild() { return softK() > 0.5; }
+          /* Phase 6: #moon-veil brightness rides Global Opacity and Soft-Eye
+             calm through the --moon-veil-k custom property (0..1, read by the
+             CSS opacity). Global Opacity 0% fades the veil out entirely and a
+             calm Soft-Eye softens it to 55%, swelling back on crescendos. */
+          let moonVeilK = -1;
+          function moonVeilTarget() {
+              return clamp01((+masterOpacity || 0) * (SOFT.enabled ? lerp(0.55, 1.0, softK()) : 1.0));
+          }
+          function updateMoonVeil() {
+              const k = moonVeilTarget();
+              if (Math.abs(k - moonVeilK) < 0.003) return;
+              moonVeilK = k;
+              document.body.style.setProperty('--moon-veil-k', k.toFixed(3));
+          }
           function softEar() { return SOFT.ear ? SOFT.ear.state : null; }
 
           function softEnsureAudio(el) {
@@ -2892,6 +2911,9 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               engine.aiWarpMode = isAiWarpActive ? currentAiWarpMode : 'aurora';
               engine.aiWarpHue = videoPalette.hue;
               engine.softEyeK = softK();
+              /* Phase 6: the R3 bank crisps stroke alpha / trims bloom while the
+                 HARD LIGHT overlay veil is up (read engine-side by bindR3Context). */
+              engine.hardLight = isHardLightActive;
               /* Phase 4 (FS-05): real EAR dynamics — bass / mid / treble — so the
                  R3 voices react to what is actually heard (or seen, in canvas
                  mode); the drive falls back to the video palette's energy. */
@@ -5558,7 +5580,7 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               for (let i = 0; i < profileNames.length; i++) {
                   const name = profileNames[i];
                   const raw = Math.min(lightCap(name), clamp01((effectAlphas[name] || 0) * masterOpacity * (automationHeld(name) ? 1 : glitchBoost) * intensity));
-                  const rate = (blendProfiles[name].rate || 0.2) * 5.0 * blendTempo * harmony * ((SOFT.enabled && SOFT.k < 0.45) ? 0.62 : 1) * (document.body.classList.contains('hard-light') ? 1.12 : 1);
+                  const rate = (blendProfiles[name].rate || 0.2) * 5.0 * blendTempo * harmony * ((SOFT.enabled && SOFT.k < 0.45) ? 0.62 : 1) * (isHardLightActive ? 1.12 : 1);
                   const prev = smoothedStrength[name] === undefined ? raw : smoothedStrength[name];
                   const rateUse = raw < 0.01 ? rate * 1.28 : rate;
                   const next = dt > 0 ? easeExp(prev, raw, dt, rateUse) : raw;
@@ -6180,7 +6202,7 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                  HARD LIGHT + MilkDrop from clipping white (first-class hardlight
                  state arrives in Phase 6 — the body class is the live source). */
               dst.globalCompositeOperation = 'soft-light';
-              const hardLightOn = document.body.classList.contains('hard-light');
+              const hardLightOn = isHardLightActive;   /* Phase 6: first-class state */
               const petalDamp = hardLightOn ? 0.78 : 1;
               const bloomCount = Math.max(2, Math.min(5, 2 + (preset.id % 3) + (vb.texture > 0.78 ? 1 : 0)));
               for (let i = 0; i < bloomCount; i++) {
@@ -9223,9 +9245,9 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               setLightLevelNow('Flash', 0);
               setLightLevelNow('Strobe', 0);
               setMilkActive(false);
-              /* Phase 4 (VA-06): HARD LIGHT is a session toggle until Phase 6 —
-                 ZERO ALL turns it off through its own synced switch. */
-              setHardLight(false);
+              /* Phase 6: HARD LIGHT is first-class state — ZERO ALL stands it
+                 down through setHardLight unless the user hard-locked it. */
+              if (!sliderLocks.hardLight) setHardLight(false);
               /* VA-05 fix: zero Ghost, VSync, AI Warp */
               if (typeof isAiWarpActive !== 'undefined') { isAiWarpActive = false; }
               if (typeof ghostModeIndex !== 'undefined') { ghostModeIndex = 0; }
@@ -9447,27 +9469,50 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
           SUGGESTED.forEach(([id, url]) => {
               bindSuggestedStart($(id), url, id === 'suggestedPlaylist' || id === 'suggestedMoonlight' || id === 'suggestedDarksynth' || id === 'suggestedBirdcage');
           });
-          /* Phase 4 (VA-06): programmatic HARD-LIGHT switch — assigned by
-             bindHardLight below so ZERO ALL can stand the toggle down through
-             the same label/class sync as a click. First-class state is Phase 6. */
-          let setHardLight = function () {};
+          /* Phase 6: the single HARD-LIGHT path. State, body class, button
+             label and ARIA move together; ZERO ALL, presets and the click
+             handler all route through here. Only a user toggle persists
+             ({ persist: true }) — preset and ZERO ALL traffic never writes
+             storage, so the restored state is always the user's own. */
+          function setHardLight(on, opts) {
+              const next = !!on;
+              const changed = isHardLightActive !== next;
+              isHardLightActive = next;
+              document.body.classList.toggle('hard-light', next);
+              const btn = document.getElementById('hardLightBtn');
+              if (btn) {
+                  btn.classList.toggle('active', next);
+                  btn.classList.toggle('locked', !!sliderLocks.hardLight);
+                  btn.textContent = (next ? 'HARD-LIGHT: ON' : 'HARD-LIGHT: OFF') +
+                      (sliderLocks.hardLight ? ' [LOCKED!]' : '');
+                  btn.setAttribute('aria-pressed', next ? 'true' : 'false');
+              }
+              if (opts && opts.persist) {
+                  try { localStorage.setItem('glitch-hard-light', next ? '1' : '0'); } catch (e) {}
+              }
+              return changed;
+          }
           (function bindHardLight() {
               const btn = document.getElementById('hardLightBtn');
-              if (!btn) return;
-              let on = false;
-              const sync = () => {
-                  document.body.classList.toggle('hard-light', on);
-                  btn.classList.toggle('active', on);
-                  btn.textContent = on ? 'HARD-LIGHT: ON' : 'HARD-LIGHT: OFF';
-                  btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-              };
-              setHardLight = (next) => {
-                  if (on === !!next) return;
-                  on = !!next;
-                  sync();
-              };
-              btn.addEventListener('click', () => { on = !on; sync(); });
-              sync();
+              if (btn) {
+                  btn.addEventListener('click', (e) => {
+                      /* Shift+click: lock parity with the slider lock buttons —
+                         a hand lock holds HARD LIGHT against presets, preset
+                         auto, randomizers and ZERO ALL until shift-clicked off. */
+                      if (e.shiftKey) {
+                          const locked = toggleUserLock('hardLight');
+                          showNotificationMessage('HARD-LIGHT ' + (locked ? 'LOCKED' : 'UNLOCKED'), 1600);
+                          setHardLight(isHardLightActive);   /* refresh badge */
+                          return;
+                      }
+                      setHardLight(!isHardLightActive, { persist: true });
+                  });
+              }
+              /* Restore the persisted user toggle; fresh installs default OFF. */
+              let saved = false;
+              try { saved = localStorage.getItem('glitch-hard-light') === '1'; } catch (e) {}
+              setHardLight(saved);
+              try { updateMoonVeil(); } catch (e) {}
           })();
 
           (function bindEar() {
@@ -9945,10 +9990,9 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                   vsyncLevels,
                   masterControls: { ...masterControls },
                   voiceFx: { bwInvert: voiceFxSettings.bwInvert, hueOffset: voiceFxSettings.hueOffset },
-                  /* Schema v4 optional round-trips: Hard Light is still the
-                     bindHardLight session toggle (first-class state is Phase 6),
-                     so its current value is read from the body class. */
-                  hardLight: document.body.classList.contains('hard-light'),
+                  /* Schema v4 optional round-trips: Hard Light is the Phase 6
+                     first-class module state, synced by setHardLight. */
+                  hardLight: isHardLightActive,
                   glyphAuto: glyphAutoActive,
                   milk: (() => {
                       const m = { active: milk.active, opacity: clamp01(milk.target) };
@@ -10133,12 +10177,13 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               if (s.glyphBank && window.SignalGlyphs && !glyphBankHeld) {
                   window.SignalGlyphs.set(s.glyphBank, { fallbackRenderable: true });
               }
-              /* Phase 2: Hard Light / Milkdrop / Glyph Auto round-trips. Hard
-                 Light is still the bindHardLight session toggle (first-class
-                 state is Phase 6), so presets drive it through its button. */
+              /* Phase 2/6: Hard Light / Milkdrop / Glyph Auto round-trips. Hard
+                 Light flows through the first-class setHardLight path; preset
+                 locks were released above, so sliderLocks.hardLight here is the
+                 user's hand lock and always holds. Preset traffic never
+                 persists — the stored state stays the user's own toggle. */
               if (typeof s.hardLight === 'boolean' && !sliderLocks.hardLight) {
-                  const hlBtn = $('hardLightBtn');
-                  if (hlBtn && document.body.classList.contains('hard-light') !== s.hardLight) hlBtn.click();
+                  setHardLight(s.hardLight);
               }
               if (s.milk && typeof s.milk.active === 'boolean') {
                   if (milk.active !== s.milk.active) setMilkActive(s.milk.active);
@@ -10879,6 +10924,9 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                      canvas holds its blends longer before the ambient pull,
                      a lively one recycles them faster */
                   effectiveHold *= R16.washHold();
+                  /* Phase 6: HARD LIGHT's overlay veil clips highlights sooner,
+                     so stacked bright pairs get 25% less hold time while it is ON. */
+                  if (isHardLightActive) effectiveHold *= 0.75;
                   const aVal = effectAlphas[a] || 0;
                   const bVal = effectAlphas[b] || 0;
                   if (aVal + bVal > sumTrigger * R16.pairRoom()) { /* R1.8: lively video earns headroom */
@@ -11566,6 +11614,7 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               try { stepHslRainbowFilter(dt); } catch (e) {}
               try { updateShiftOverlay(now, dt); } catch (e) {}
               applyMasterFilters();
+              updateMoonVeil();   /* Phase 6: --moon-veil-k follows Global Opacity + Soft-Eye */
               if (now - lastPresetSkinUpdate > 220) { lastPresetSkinUpdate = now;
                   updatePresetSkin(); }
               antiWashoutStep(now, dt);

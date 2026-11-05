@@ -1,10 +1,10 @@
 /* Phase 5 (FS-06): MilkDrop 30-mode confluence, render budget and deck UI.
-   The hardlight half of this file covers the Phase 5 damp (body class driven);
-   Phase 6 extends it with the first-class isHardLightActive state, persistence
-   and the #moon-veil integration. Keep the section markers below so Phase 6
-   tests can slot in next to their Phase 5 counterparts. */
+   Phase 6: HARD LIGHT first-class state — persistence, locks, ZERO ALL and
+   preset round-trips, the #moon-veil --moon-veil-k integration, tightened
+   washout holds and the R3 engine hard-light flag. */
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import vm from 'node:vm';
 import { readWeb, runInSandbox } from './harness.mjs';
 
 const player = readWeb('js/glitch-player.js');
@@ -79,14 +79,143 @@ test('Phase 5: Soft-Eye calm cap rides the final milk alpha', () => {
     assert.match(renderSlice, /if \(SOFT\.enabled\) finalAlpha \*= lerp\(0\.58, 1\.0, softK\(\)\);/);
 });
 
-/* ---------------- hardlight damp (Phase 6 extends this section) ---------------- */
+/* ---------------- hardlight damp + Phase 6 first-class state ---------------- */
 
-test('Phase 5: hard light damps petal lightness/alpha and the final alpha by 0.78', () => {
-    assert.match(renderSlice, /document\.body\.classList\.contains\('hard-light'\)/);
+test('Phase 5/6: hard light damps petal lightness/alpha and the final alpha by 0.78 off first-class state', () => {
+    assert.match(renderSlice, /const hardLightOn = isHardLightActive;/,
+        'the Phase 5 body-class read is replaced by first-class state');
     assert.match(renderSlice, /const petalDamp = hardLightOn \? 0\.78 : 1;/);
     assert.match(renderSlice, /if \(hardLightOn\) finalAlpha \*= 0\.78;/);
-    /* Phase 6: replace the body-class read with first-class isHardLightActive
-       and extend the assertions here (persistence, locks, ZERO ALL). */
+});
+
+test('Phase 6: HARD LIGHT is module state with a persisted default-OFF restore', () => {
+    assert.match(player, /let isHardLightActive = false;/, 'fresh installs default to OFF');
+    assert.match(player, /localStorage\.getItem\('glitch-hard-light'\) === '1'/, 'restore reads the stored flag');
+    assert.match(player, /setHardLight\(saved\);/, 'the restore flows through the single setHardLight path');
+    assert.match(player, /setHardLight\(!isHardLightActive, \{ persist: true \}\);/,
+        'only the user click persists');
+    assert.match(player,
+        /if \(opts && opts\.persist\) \{\s*try \{ localStorage\.setItem\('glitch-hard-light', next \? '1' : '0'\); \} catch \(e\) \{\}\s*\}/,
+        'preset / ZERO ALL traffic never writes storage');
+    assert.match(player, /toggleUserLock\('hardLight'\)/, 'shift-click lock parity with the slider lock buttons');
+});
+
+test('Phase 6: capture, apply and ZERO ALL route through setHardLight and respect the hand lock', () => {
+    assert.match(player, /hardLight: isHardLightActive,/, 'captureSettings saves the first-class state');
+    assert.match(player,
+        /if \(typeof s\.hardLight === 'boolean' && !sliderLocks\.hardLight\) \{\s*setHardLight\(s\.hardLight\);\s*\}/,
+        'applySettings drives the state switch, not the button');
+    assert.ok(!player.includes('hlBtn.click()'), 'no preset path clicks the HARD-LIGHT button any more');
+    assert.match(player, /if \(!sliderLocks\.hardLight\) setHardLight\(false\);/,
+        'ZERO ALL stands hard light down unless user-locked');
+});
+
+test('Phase 6: randomizers never touch hard light, so a locked state cannot be overwritten', () => {
+    const randomize = sliceBetween('function randomizeBoard()', 'function applyRandomSeed');
+    const seeded = sliceBetween('function applyRandomSeed(seed)', 'if (randomSeedSlider)');
+    assert.doesNotMatch(randomize + seeded, /hardLight|hard-light/i);
+});
+
+/* Runs the real setHardLight source with DOM/storage stand-ins. */
+function hardLightSandbox() {
+    const src = player.slice(player.indexOf('function setHardLight(on, opts)'),
+        player.indexOf('(function bindHardLight()'));
+    assert.ok(src.length > 0, 'setHardLight found');
+    const store = {};
+    const bodyClasses = new Set();
+    const btn = {
+        attrs: {}, classes: new Set(), textContent: '',
+        classList: { toggle(c, on) { if (on) btn.classes.add(c); else btn.classes.delete(c); } },
+        setAttribute(k, v) { btn.attrs[k] = v; }
+    };
+    const sandbox = {
+        isHardLightActive: false,
+        sliderLocks: { hardLight: false },
+        document: {
+            body: { classList: { toggle(c, on) { if (on) bodyClasses.add(c); else bodyClasses.delete(c); } } },
+            getElementById: () => btn
+        },
+        localStorage: { setItem(k, v) { store[k] = v; }, getItem(k) { return k in store ? store[k] : null; } }
+    };
+    vm.createContext(sandbox);
+    const run = (code) => vm.runInContext(code, sandbox);
+    run(src);
+    return { run, store, bodyClasses, btn };
+}
+
+const ZERO_LINE = 'if (!sliderLocks.hardLight) setHardLight(false);';
+const APPLY_LINE = "if (typeof s.hardLight === 'boolean' && !sliderLocks.hardLight) { setHardLight(s.hardLight); }";
+
+test('Phase 6: state round-trips Save Preset → ZERO ALL → Load Preset and syncs class/label/ARIA', () => {
+    const { run, store, bodyClasses, btn } = hardLightSandbox();
+    run('setHardLight(true, { persist: true })');
+    assert.equal(run('isHardLightActive'), true);
+    assert.equal(store['glitch-hard-light'], '1', 'the user toggle persists');
+    assert.ok(bodyClasses.has('hard-light'));
+    assert.equal(btn.attrs['aria-pressed'], 'true');
+    assert.match(btn.textContent, /HARD-LIGHT: ON/);
+    const saved = run('isHardLightActive');            /* Save Preset: hardLight: isHardLightActive */
+    run(ZERO_LINE);                                    /* ZERO ALL */
+    assert.equal(run('isHardLightActive'), false);
+    assert.ok(!bodyClasses.has('hard-light'));
+    assert.equal(store['glitch-hard-light'], '1', 'ZERO ALL never rewrites the stored user toggle');
+    run('var s = { hardLight: ' + saved + ' };');      /* Load Preset */
+    run(APPLY_LINE);
+    assert.equal(run('isHardLightActive'), true, 'the preset restores hard light');
+    assert.ok(bodyClasses.has('hard-light'));
+    assert.equal(btn.attrs['aria-pressed'], 'true');
+});
+
+test('Phase 6: a hand lock blocks ZERO ALL and preset overwrites', () => {
+    const { run } = hardLightSandbox();
+    run('setHardLight(true, { persist: true })');
+    run('sliderLocks.hardLight = true');
+    run(ZERO_LINE);
+    assert.equal(run('isHardLightActive'), true, 'locked hard light survives ZERO ALL');
+    run('var s = { hardLight: false };');
+    run(APPLY_LINE);
+    assert.equal(run('isHardLightActive'), true, 'locked hard light survives a preset');
+    run('sliderLocks.hardLight = false');
+    run(ZERO_LINE);
+    assert.equal(run('isHardLightActive'), false, 'unlocked again, ZERO ALL turns it off');
+});
+
+test('Phase 6: --moon-veil-k scales with Global Opacity and Soft-Eye calm', () => {
+    const veil = sliceBetween('let moonVeilK = -1;', 'function softEar');
+    const clamp01 = (v) => Math.min(1, Math.max(0, v));
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const kFor = (op, enabled, k) => new Function('masterOpacity', 'SOFT', 'softK', 'clamp01', 'lerp',
+        veil + '; return moonVeilTarget();')(op, { enabled }, () => k, clamp01, lerp);
+    assert.equal(kFor(0, false, 1), 0, 'Global Opacity 0% fades the veil out');
+    assert.equal(kFor(1, false, 0), 1, 'Soft-Eye off leaves the veil at full strength');
+    assert.equal(kFor(1, true, 0), 0.55, 'a calm Soft-Eye softens the veil to 55%');
+    assert.equal(kFor(1, true, 1), 1, 'a crescendo swells the veil back to 100%');
+    assert.equal(kFor(0.5, true, 0.5), 0.5 * lerp(0.55, 1.0, 0.5), 'opacity and calm multiply');
+    assert.match(player, /applyMasterFilters\(\);\s*updateMoonVeil\(\);/, 'the frame loop drives the property');
+    assert.match(player, /document\.body\.style\.setProperty\('--moon-veil-k', k\.toFixed\(3\)\);/);
+    const css = readWeb('css/glitch-player.css');
+    assert.match(css, /#moon-veil \{[\s\S]*?opacity: calc\(0\.85 \* var\(--moon-veil-k, 1\)\);/,
+        'the soft-light veil reads the custom property');
+    assert.match(css, /body\.hard-light #moon-veil \{[\s\S]*?opacity: var\(--moon-veil-k, 1\);/,
+        'the hard-light overlay veil reads it too');
+});
+
+test('Phase 6: washout-pair holds tighten by 25% while hard light is ON', () => {
+    const wash = sliceBetween('function antiWashoutStep', 'AESTHETIC BURST SYSTEM');
+    const seq = wash.match(/let effectiveHold = holdMs;[\s\S]*?if \(isHardLightActive\) effectiveHold \*= 0\.75;/);
+    assert.ok(seq, 'the hard-light tighten follows the energy patience scale');
+    const holdFor = (hardOn) => new Function('holdMs', 'isAiWarpActive', 'WARP_BLEND_EFFECTS', 'a', 'b',
+        'R16', 'isHardLightActive', seq[0] + '; return effectiveHold;')(
+        1000, false, new Set(), 'X', 'Y', { washHold: () => 1 }, hardOn);
+    assert.equal(holdFor(false), 1000);
+    assert.equal(holdFor(true), 750);
+});
+
+test('Phase 6: syncR3Engine hands the R3 bank the hard-light flag and bindR3Context trims bloom by 0.82', () => {
+    assert.match(player, /engine\.hardLight = isHardLightActive;/);
+    const r3 = readWeb('js/r3-factories.js');
+    const read = r3.indexOf("glowMult: (0.9 + videoPalette.energy * 0.25) * (engine.hardLight ? 0.82 : 1)");
+    assert.ok(read > r3.indexOf('END VERBATIM'), 'the engine-side read lives in the host adapter, not the pinned source');
 });
 
 /* ---------------- reduced motion ---------------- */
