@@ -15,15 +15,15 @@ EAR repair and a legal YouTube cadence proxy (zero audio capture).
 
 | Item | Value |
 | --- | --- |
-| Installer | `out\Glitch-Player-R4-4.2.4-x64-setup.exe` (built by `build.cmd`, not committed) |
-| Size | 44,706,980 bytes |
-| SHA-256 | `0514b1c159934ba8cfce942720bf80764754b7481593b9ac21bfdf31d439ce00` |
-| CAB SHA-256 | `4514a108412335642b0097097531b559a09f2f712b14bc8c93afb7580ba4af8e` |
+| Installer | `out\Glitch-Player-R4-4.3.1-x64-setup.exe` (built by `build.cmd`) |
+| Size | 44,719,655 bytes |
+| SHA-256 | `74d87fa43a5b43876d3eab405770aac62565354f3b97ff4d730dfab3c792d260` |
+| CAB SHA-256 | `1a390bfb91a2ca13774743965b030ba2665c9c7c4d625a7d677ecf17702401aa` |
 | Payload | 249 files |
 | Tests | **353 total** (96 host xUnit, 256 Node web — 67 new across 9 suites incl. new `milkdrop-hardlight` and `soft-eye-r3` — 1 CAB integration) |
 | Manifest checks | glyph tables, effects and surfaces `--check` all green |
 | Defender | No threats in the installer or working package |
-| Signed / version | Unsigned; product version intentionally still 4.2.4 pending maintainer release decision |
+| Signed / version | Unsigned; product version **4.3.1** |
 | Built | 2026-11-05, Windows 11 x64, .NET SDK 10.0.403, Node v24.19.0, NSIS 3.1311 |
 
 **Not yet verified:** manual Windows/WebView2 playback matrix (YouTube, local

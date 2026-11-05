@@ -3,32 +3,35 @@
 Windows YouTube and local-media playback with a native .NET 10/WebView2 host,
 43 effect voices, presets, automation and the EAR/SOFT-EYE engine.
 
-## Download: EAR monitor prerelease
+## Download: v4.3.1 "Full-Scope Remediation" prerelease
 
-**[Download the Windows x64 installer](https://github.com/TheImortalimp/Glitch-Player/releases/download/v4.2.4-ear-monitor.1/Glitch-Player-R4-4.2.4-x64-setup.exe)**
+**[Download the Windows x64 installer](https://github.com/TheImortalimp/Glitch-Player/releases/download/v4.3.1/Glitch-Player-R4-4.3.1-x64-setup.exe)**
 
-- [Release page and notes](https://github.com/TheImortalimp/Glitch-Player/releases/tag/v4.2.4-ear-monitor.1)
-- [Installer checksum](https://github.com/TheImortalimp/Glitch-Player/releases/download/v4.2.4-ear-monitor.1/Glitch-Player-R4-4.2.4-x64-setup.exe.sha256)
-- [Download the documentation and READMEs](https://github.com/TheImortalimp/Glitch-Player/releases/download/v4.2.4-ear-monitor.1/Glitch-Player-v4.2.4-ear-monitor.1-documentation.zip)
+- [Release page and notes](https://github.com/TheImortalimp/Glitch-Player/releases/tag/v4.3.1)
+- [Installer checksum](https://github.com/TheImortalimp/Glitch-Player/releases/download/v4.3.1/Glitch-Player-R4-4.3.1-x64-setup.exe.sha256)
 
-Tag: **`v4.2.4-ear-monitor.1`**. Installer version: **4.2.4**, unchanged.
+Tag: **`v4.3.1`**. Installer version: **4.3.1**.
 This is a **prerelease**, not a declaration that every playback regression is resolved.
-It fixes unnecessary EAR monitor work without changing EAR processing, effects,
-automation, video quality or security settings.
+It implements the complete full-scope remediation roadmap: rebuilt glyph
+randomization with font probing and Glyph Roll/Auto/Lock controls, 43-voice
+seeded MACHINE preset decks with replayable deck seeds, an airtight Flash/Strobe
+trigger envelope, cancellation-safe automations and ZERO ALL, MilkDrop 30-mode
+confluence, first-class lockable HARD LIGHT, 43-voice SOFT-EYE calm tables and a
+repaired visual EAR with a legal YouTube cadence proxy — **no YouTube audio is
+ever captured**.
 
-The installer is **44,657,686 bytes**, **unsigned**, and was scanned by the build's
+The installer is **44,719,655 bytes**, **unsigned**, and was scanned by the build's
 Microsoft Defender guard with no threats reported. Keep Windows security protections
-enabled. Older 4.2.4 installers have the same filename; identify this build by its tag
-and SHA-256:
+enabled. Identify this build by its tag and SHA-256:
 
 ```text
-f530d6570e6c10b154a4f3368d1998b10bf8a82c732caa692919aff9e3011080
+74d87fa43a5b43876d3eab405770aac62565354f3b97ff4d730dfab3c792d260
 ```
 
-**Validation:** 286 tests passed (96 host, 189 web, 1 CAB integration). Native
-light-load visible/hidden checks passed; the maintainer reported fullscreen 1080p
-as "Sharp and smooth". The wider stress-testing gate remains open; see the
-[full evidence and limitations](standalone-revision-R-final-4.0/BUILD_STATUS.md#phase-0-prerelease-candidate-2026-11-05).
+**Validation:** 353 tests passed (96 host, 256 web, 1 CAB integration) and all
+manifest/table checks are green. The manual Windows/WebView2 playback matrix has
+not been run against this build; the playback gate remains open. See the
+[full evidence and limitations](standalone-revision-R-final-4.0/BUILD_STATUS.md#r431-full-scope-remediation-build-2026-11-05).
 
 > **Photosensitivity warning:** source videos and effects can produce flashing and
 > high-contrast flicker. This is not a photosensitivity-safe mode.
@@ -36,7 +39,7 @@ as "Sharp and smooth". The wider stress-testing gate remains open; see the
 ## Documentation
 
 - [Player README, installation and controls](standalone-revision-R-final-4.0/README.md)
-- [Prerelease notes](standalone-revision-R-final-4.0/docs/r4.3/RELEASE-NOTES-4.2.4-EAR-MONITOR-1.md)
+- [Prerelease notes](standalone-revision-R-final-4.0/docs/r4.3/RELEASE-NOTES-4.3.1.md)
 - [Build status and native playback evidence](standalone-revision-R-final-4.0/BUILD_STATUS.md)
 - [Changelog](standalone-revision-R-final-4.0/CHANGELOG.md)
 - [Security and hardening](standalone-revision-R-final-4.0/SECURITY.md)

@@ -1,19 +1,23 @@
 # Glitch Player - Standalone Revision R Final 4.1
 
-## Current prerelease: v4.2.4-ear-monitor.1
+## Current prerelease: v4.3.1 "Full-Scope Remediation"
 
-[Download the tested Windows x64 installer](https://github.com/TheImortalimp/Glitch-Player/releases/download/v4.2.4-ear-monitor.1/Glitch-Player-R4-4.2.4-x64-setup.exe)
-or open the [release page](https://github.com/TheImortalimp/Glitch-Player/releases/tag/v4.2.4-ear-monitor.1).
-This monitor-only candidate retains installer version **4.2.4**. It caps EAR monitor
-presentation at 12 Hz and stops hidden updates without changing EAR, effects,
-automation, video quality or security. It is a **prerelease** because the full
-playback/stress-testing matrix remains open.
+[Download the Windows x64 installer](https://github.com/TheImortalimp/Glitch-Player/releases/download/v4.3.1/Glitch-Player-R4-4.3.1-x64-setup.exe)
+or open the [release page](https://github.com/TheImortalimp/Glitch-Player/releases/tag/v4.3.1).
+Installer version **4.3.1**. It implements all eight phases of the full-scope
+remediation roadmap: rebuilt glyph randomization with font probing and new
+Glyph Roll/Auto/Lock controls, 43-voice seeded MACHINE decks with a replayable
+deck-seed UI, an airtight Flash/Strobe trigger envelope, cancellation-safe
+automations and ZERO ALL, MilkDrop 30-mode confluence with a tiered render
+budget, first-class lockable HARD LIGHT, 43-voice SOFT-EYE tables and a repaired
+visual EAR with a legal YouTube cadence proxy (zero audio capture). It is a
+**prerelease** because the full playback/stress-testing matrix remains open.
 
-Size: **44,657,686 bytes**. SHA-256:
-`f530d6570e6c10b154a4f3368d1998b10bf8a82c732caa692919aff9e3011080`.
+Size: **44,719,655 bytes**. SHA-256:
+`74d87fa43a5b43876d3eab405770aac62565354f3b97ff4d730dfab3c792d260`.
 The installer is unsigned. See the
-[prerelease notes](docs/r4.3/RELEASE-NOTES-4.2.4-EAR-MONITOR-1.md) and
-[build evidence](BUILD_STATUS.md#phase-0-prerelease-candidate-2026-11-05).
+[prerelease notes](docs/r4.3/RELEASE-NOTES-4.3.1.md) and
+[build evidence](BUILD_STATUS.md#r431-full-scope-remediation-build-2026-11-05).
 
 ## Proposed next release planning
 

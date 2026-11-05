@@ -1,5 +1,57 @@
 # Changelog - Standalone Revision R Final 4.1
 
+## v4.3.1 - 2026-11-05 (prerelease) - Full-Scope Remediation
+
+Implements all eight phases of the full-scope remediation roadmap
+(`GLITCH-PLAYER-FULL-SCOPE-ROADMAP.md`, track R4.3-04):
+
+- **Glyph randomization rebuilt.** Runtime font-coverage probe filters unrenderable
+  (tofu) tables out of every random pool; all 13 glyph voices route through
+  `SignalGlyphs` and switch alphabets within a frame; seeded, refreshable
+  `All scripts`; new `Glyph Roll`, `Glyph Auto` and `<LOCK!>` controls beside the
+  glyph bank, honored by presets, Randomize All, Random Seed and preset auto.
+- **MACHINE decks hear all 43 voices.** One canonical seeded generator (a legacy
+  17-voice duplicate was silently shadowing it) with unbiased Fisher-Yates
+  selection, full preset fields (glyph bank, voice FX, Hard Light, MilkDrop) so
+  banks never bleed state into each other, and a deck-seed readout with copy and
+  re-roll so any 80-preset MACHINE deck replays from its 32-bit seed. Deepseek-1
+  obeys the light caps in memory. Preset schema v4 accepts the new optional
+  fields while every v3 USER/LAB preset stays valid.
+- **Flash & Strobe airtight.** Manual Trigger works with automation off as a
+  one-shot pulse through a transient envelope that never mutates a zero slider
+  and never stacks instances (10 rapid clicks = one instance); wander rest rolls
+  genuinely land on 0.000 and respect SOFT-EYE calm caps (<= 2%); washout pairs
+  recalibrated to thresholds the capped lights can physically reach.
+- **Automations obey intent.** Auto Glitch, sparks, aesthetic bursts, B&W sweeps
+  and warp accents all skip cancelled or locked voices and a zeroed master; R3
+  voices step at most once per frame; 22 aesthetic groups now cover every R3 and
+  AI-Warp voice; the AI warp rotation spans all 30 blend modes with EAR-driven
+  dynamics; ZERO ALL additionally zeroes the lights, parks warp displacement,
+  flushes sparks and timed pulses, and switches Hard Light off.
+- **DROP THE MILK? confluence.** The mandala follows the live warp mode across
+  all 30 blend profiles with authored composite modes, master-opacity and
+  SOFT-EYE scaling, Hard Light damping and a reduced-motion static frame;
+  per-petal blur removed and internal resolution tiered for a large render-cost
+  drop; deck prev/next/hold and opacity controls with seeded shuffle; no more
+  synchronous storage writes inside the frame loop.
+- **HARD LIGHT first class.** Lockable (shift-click), persisted across sessions,
+  saved and restored by presets, turned off by ZERO ALL unless locked, damping
+  R3 bloom, and driving a `--moon-veil-k` veil that fades with Global Opacity
+  and softens in SOFT-EYE calm.
+- **SOFT-EYE & EAR repaired.** Calm caps and paint tables cover all 43 voices;
+  the `dia` B&W burst respects locks, cancellation and automation state and
+  restores its pre-burst level; the visual EAR genuinely activates with distinct
+  pseudo-spectral bass/mid/treb; EAR state resets on every source switch; and
+  YouTube reactivity derives from legal player state and track timing metadata -
+  **never captured audio**. Honest HUD badges including PAUSED.
+- Tests: **353 total** (96 host, 256 web - 67 new - 1 CAB integration);
+  glyph/effects/surfaces checks green; Defender clean.
+- The manual Windows/WebView2 playback matrix has not been run against this
+  build; the R4.3-00 playback gate remains open, so this ships as a prerelease.
+
+See [prerelease notes](docs/r4.3/RELEASE-NOTES-4.3.1.md) for downloads, checksum
+and remaining validation limits.
+
 ## v4.2.4-ear-monitor.1 - 2026-11-05 (prerelease)
 
 - Cache EAR monitor nodes and stop hidden/inactive presentation work.
