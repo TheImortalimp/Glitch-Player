@@ -2,6 +2,35 @@
 
 This file records what was actually built and tested, and what hasn't been tested yet. "Verified" means the check was run and passed on the machine below. The binaries are **not code-signed**.
 
+## R4.3.1 full-scope remediation build (2026-11-05)
+
+Local branch `wip/r4.3.1-kiro-resume` (based on `db0b29e`), implementing
+`GLITCH-PLAYER-FULL-SCOPE-ROADMAP.md` (R4.3-04) Phases 0–8: glyph randomization
+with runtime font probing and 13-voice routing, 43-voice MACHINE preset decks
+with seed replay UI, schema v4 (backward-compatible with v3), cross-bank preset
+hygiene, Flash/Strobe trigger pulse envelope and wander ordering, automation
+cancellation/lock guards with airtight ZERO ALL, MilkDrop 30-mode confluence and
+render budget, first-class lockable Hard Light, 43-voice Soft-Eye tables, visual
+EAR repair and a legal YouTube cadence proxy (zero audio capture).
+
+| Item | Value |
+| --- | --- |
+| Installer | `out\Glitch-Player-R4-4.2.4-x64-setup.exe` (built by `build.cmd`, not committed) |
+| Size | 44,706,980 bytes |
+| SHA-256 | `0514b1c159934ba8cfce942720bf80764754b7481593b9ac21bfdf31d439ce00` |
+| CAB SHA-256 | `4514a108412335642b0097097531b559a09f2f712b14bc8c93afb7580ba4af8e` |
+| Payload | 249 files |
+| Tests | **353 total** (96 host xUnit, 256 Node web — 67 new across 9 suites incl. new `milkdrop-hardlight` and `soft-eye-r3` — 1 CAB integration) |
+| Manifest checks | glyph tables, effects and surfaces `--check` all green |
+| Defender | No threats in the installer or working package |
+| Signed / version | Unsigned; product version intentionally still 4.2.4 pending maintainer release decision |
+| Built | 2026-11-05, Windows 11 x64, .NET SDK 10.0.403, Node v24.19.0, NSIS 3.1311 |
+
+**Not yet verified:** manual Windows/WebView2 playback matrix (YouTube, local
+media, EAR modes, Soft-Eye, automations, displays, reduced motion) has not been
+run against this build; the R4.3-00 playback gate remains open. No claim of
+playback smoothness or performance is made for this build.
+
 ## Phase 0 prerelease candidate (2026-11-05)
 
 Approved scope: the EAR monitor presentation fix only, on local branch
