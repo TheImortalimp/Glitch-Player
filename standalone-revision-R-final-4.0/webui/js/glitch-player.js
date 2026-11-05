@@ -528,7 +528,7 @@
           const voiceFxLocks = { bwInvert: false, hueOffset: false, milkOpacity: false };
           const milk = {
               active: false, opacity: 0.30, target: 0.30, startAt: 0, lastAt: 0,
-              deck: [], index: -1, preset: null,
+              deck: [], index: -1, preset: null, hold: false, advanceAt: 0, shuffles: 0,
               next: null, nextCtx: null, feedback: null, feedbackCtx: null
           };
           let aiwUi = null;
@@ -574,6 +574,16 @@
                       locks: { ...voiceFxLocks }
                   }));
               } catch (e) {}
+          }
+          /* Phase 5 (FS-06): the render path never blocks a frame on synchronous
+             storage — persistence is debounced ~500 ms off the draw loop. */
+          let voiceFxSaveTimer = 0;
+          function scheduleVoiceFxSave() {
+              if (voiceFxSaveTimer) return;
+              voiceFxSaveTimer = setTimeout(() => {
+                  voiceFxSaveTimer = 0;
+                  saveVoiceFxControls();
+              }, 500);
           }
           function randomizeVoiceFx() {
               /* B&W Strength lands near the 50 / 75 / 100% landmarks; the hue moves a
@@ -5928,15 +5938,23 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
           const MILK_FLAT_BLEND = Object.freeze({
               ghostSplit: 1, ghostChroma: 1, ghostLines: 1, ghostWarp: 1, ghostGlow: 1,
               vsyncSpeed: 1, vsyncTears: 1, vsyncRoll: 1, phase: 1, huePhase: 0,
-              hardLight: 1, softEye: 1, ear: 1, canvas: 1, automation: 1
+              hardLight: 1, softEye: 1, ear: 1, canvas: 1, automation: 1, blendOp: ''
           });
           const milkBlendCache = {};
+          /* Phase 5 (FS-06): the live AI-Warp mode (not a hardcoded 'aurora')
+             keys the blend, unlocking all 30 WARP_BLEND/WARP_AUX profiles. Each
+             warp mode also elects a milk composite op: hot-glow modes push
+             'lighter', line-heavy modes push 'soft-light', the rest 'screen'. */
           function milkBlendProfile() {
-              const mode = isAiWarpActive ? 'aurora' : '';
+              const mode = isAiWarpActive ? (currentAiWarpMode || 'aurora') : '';
               if (!milkBlendCache[mode]) {
                   const api = window.R3GhostVsync;
-                  milkBlendCache[mode] = (api && typeof api.getWarpBlendProfile === 'function')
-                      ? Object.freeze(api.getWarpBlendProfile(mode)) : MILK_FLAT_BLEND;
+                  const base = (api && typeof api.getWarpBlendProfile === 'function')
+                      ? api.getWarpBlendProfile(mode) : MILK_FLAT_BLEND;
+                  const blendOp = !mode ? '' :
+                      (base.ghostGlow >= 1.04 ? 'lighter' :
+                          (base.ghostLines >= 1.08 ? 'soft-light' : 'screen'));
+                  milkBlendCache[mode] = Object.freeze(Object.assign({}, base, { blendOp }));
               }
               return milkBlendCache[mode];
           }
@@ -5956,17 +5974,20 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
           }
 
           /* Random order that never plays one family twice in a row and picks the
-             nearest-hue preset out of a few random candidates, so changes flow. */
-          function orderMilkDeck(bank) {
+             nearest-hue preset out of a few random candidates, so changes flow.
+             Phase 5 (FS-06): an optional rng (mulberry32 from the session/preset
+             seed) makes the shuffle deterministic; Math.random stays the default. */
+          function orderMilkDeck(bank, rng) {
+              const rand = typeof rng === 'function' ? rng : Math.random;
               const pool = bank.slice();
               const deck = [];
               let prev = null;
               while (pool.length) {
                   let best = -1, bestScore = Infinity;
                   for (let n = 0; n < 5; n++) {
-                      const i = (Math.random() * pool.length) | 0;
+                      const i = (rand() * pool.length) | 0;
                       const cand = pool[i];
-                      let score = Math.random() * 20;
+                      let score = rand() * 20;
                       if (prev) {
                           const dh = Math.abs(cand.hueOffset - prev.hueOffset);
                           score += Math.min(dh, 360 - dh) + (cand.family === prev.family ? 400 : 0);
@@ -5984,15 +6005,44 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               milk.lastAt = 0;
               milk.index = -1;
               milk.preset = null;
+              milk.advanceAt = 0;
               if (milk.active) {
-                  milk.deck = orderMilkDeck(MILK_PRESETS);
-              } else if (milk.next) {
-                  /* release the two full-size feedback buffers while off */
-                  milk.next.width = milk.next.height = 1;
-                  milk.feedback.width = milk.feedback.height = 1;
+                  milk.deck = orderMilkDeck(MILK_PRESETS, milkDeckRng());
+              } else {
+                  milk.hold = false;
+                  if (milk.next) {
+                      /* release the two full-size feedback buffers while off */
+                      milk.next.width = milk.next.height = 1;
+                      milk.feedback.width = milk.feedback.height = 1;
+                  }
               }
               syncAiWarpMastersUi();
               return milk.active;
+          }
+
+          /* Phase 5 (FS-06): deterministic deck shuffle — the Random Seed slider
+             plus a per-session salt and a per-shuffle counter feed mulberry32. */
+          const MILK_SESSION_SEED = (Math.random() * 0x7FFFFFFF) | 0;
+          function milkDeckRng() {
+              const eng = window.GlitchEngine;
+              if (!eng || typeof eng.mulberry32 !== 'function' || typeof eng.hashSeed !== 'function') return null;
+              milk.shuffles++;
+              const base = randomSeedSlider ? (+randomSeedSlider.value || 0) : 0;
+              return eng.mulberry32(eng.hashSeed('milk:' + base.toFixed(3) + ':' +
+                  MILK_SESSION_SEED + ':' + milk.shuffles));
+          }
+
+          /* Phase 5 (FS-06): manual deck stepping — ◀/▶ jump presets and restart
+             the auto-advance window from now; HOLD freezes auto-advance. */
+          function milkStep(delta) {
+              if (!milk.active || !milk.deck.length) return;
+              const len = milk.deck.length;
+              milk.index = (((milk.index + delta) % len) + len) % len;
+              milk.preset = milk.deck[milk.index];
+              if (!voiceFxLocks.milkOpacity) milk.target = milk.preset.opacity;
+              milk.advanceAt = performance.now() + 18000;
+              syncAiWarpMastersUi();
+              saveVoiceFxControls();
           }
 
           function setMilkOpacity(value) {
@@ -6002,21 +6052,48 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               return level;
           }
 
+          /* Phase 5 (FS-06): internal mandala resolution per quality tier —
+             tier 0: 0.5x viewport + one feedback blur; tier 1: 0.38x viewport,
+             no blur filter; tier 2: 0.28x viewport, crisp feedback only. */
+          const MILK_TIER_SCALE = [0.5, 0.38, 0.28];
+          const MILK_COMPOSITE_OPS = { screen: 1, lighter: 1, 'soft-light': 1 };
+          const milkMotionQuery = window.matchMedia ?
+              window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+
           function renderMilkdrop(now) {
               if (!milk.active || !milk.deck.length) return;
-              const w = mainCanvas.width, h = mainCanvas.height;
-              if (w < 2 || h < 2 || !ensureMilkBuffers(w, h)) return;
+              const vw = mainCanvas.width, vh = mainCanvas.height;
+              if (vw < 2 || vh < 2) return;
+              /* Phase 5 (FS-06): Global Opacity 0% silences the mandala — a
+                 clean source frame costs nothing. */
+              const masterScale = clamp01((+masterOpacity || 0) *
+                  (0.35 + 0.65 * clamp01(masterControls.effectIntensity)));
+              if (masterScale <= 0.001) return;
+              const tierScale = MILK_TIER_SCALE[qualityTier] || MILK_TIER_SCALE[0];
+              const w = Math.max(2, Math.round(vw * tierScale));
+              const h = Math.max(2, Math.round(vh * tierScale));
+              if (!ensureMilkBuffers(w, h)) return;
+              /* prefers-reduced-motion: reduce paints a calm ambient mandala —
+                 phase rotation/zoom freeze and auto-advance stands down. */
+              const still = !!(milkMotionQuery && milkMotionQuery.matches);
               if (!milk.startAt) milk.startAt = now;
               const elapsed = Math.max(0, now - milk.startAt);
               const mb = milkBlendProfile();
               const presetDuration = 14000 / Math.max(0.65, mb.automation);
-              const presetIndex = Math.floor(elapsed / presetDuration) % milk.deck.length;
-              if (presetIndex !== milk.index || !milk.preset) {
-                  milk.index = presetIndex;
-                  milk.preset = milk.deck[presetIndex];
+              if (!milk.preset) {
+                  milk.index = Math.max(0, milk.index) % milk.deck.length;
+                  milk.preset = milk.deck[milk.index];
+                  milk.advanceAt = now + presetDuration;
+                  if (!voiceFxLocks.milkOpacity && !milk.hold) milk.target = milk.preset.opacity;
+                  syncAiWarpMastersUi();
+                  scheduleVoiceFxSave();
+              } else if (!still && !milk.hold && now >= milk.advanceAt) {
+                  milk.index = (milk.index + 1) % milk.deck.length;
+                  milk.preset = milk.deck[milk.index];
+                  milk.advanceAt = now + presetDuration;
                   if (!voiceFxLocks.milkOpacity) milk.target = milk.preset.opacity;
                   syncAiWarpMastersUi();
-                  saveVoiceFxControls();
+                  scheduleVoiceFxSave();
               }
               const preset = milk.preset;
               const opacityDt = milk.lastAt ? Math.max(0, Math.min(0.1, (now - milk.lastAt) / 1000)) : 0;
@@ -6025,19 +6102,25 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               /* a zeroed Milkdrop costs nothing */
               if (milk.opacity <= 0.001 && milk.target <= 0.001) return;
 
-              const t = elapsed * 0.001;
+              const t = still ? 0 : elapsed * 0.001;
               const vb = milkVoiceBlend();
               const es = SOFT.ear ? SOFT.ear.state : null;
               const drive = clamp01(videoPalette.energy || 0);
-              const bass = clamp01(((es && es.bass) || drive) * mb.ear * (0.86 + vb.rhythm * 0.14));
-              const mid = clamp01(((es && es.mid) || drive) * mb.ear * (0.88 + vb.texture * 0.12));
-              const treble = clamp01(((es && es.treb) || 0) * mb.ear * (0.88 + vb.chroma * 0.12));
-              const beatK = clamp01(((es && es.beat) || SOFT.beat || 0) * mb.ear * (0.85 + vb.rhythm * 0.15));
+              /* Phase 5 (FS-06): a live EAR reporting bass === 0 is a genuinely
+                 quiet section — calm the mandala instead of jumping to drive. */
+              const earLive = !!(es && es.active);
+              const bass = clamp01((earLive && Number.isFinite(es.bass) ? es.bass : drive) *
+                  mb.ear * (0.86 + vb.rhythm * 0.14));
+              const mid = clamp01((earLive && Number.isFinite(es.mid) ? es.mid : drive) *
+                  mb.ear * (0.88 + vb.texture * 0.12));
+              const treble = clamp01((earLive && Number.isFinite(es.treb) ? es.treb : 0) *
+                  mb.ear * (0.88 + vb.chroma * 0.12));
+              const beatK = still ? 0 : clamp01(((es && es.beat) || SOFT.beat || 0) * mb.ear * (0.85 + vb.rhythm * 0.15));
               const hueBase = ((videoPalette.hue || 0) + preset.hueOffset + t * (8 + treble * 26 * mb.vsyncSpeed) +
                   mb.huePhase) % 360;
-              const zoom = 1.002 + preset.zoomBias + 0.006 * Math.sin(t * 0.42 + preset.id) + bass * 0.009 +
+              const zoom = still ? 1 : 1.002 + preset.zoomBias + 0.006 * Math.sin(t * 0.42 + preset.id) + bass * 0.009 +
                   (mb.canvas - 1) * 0.002 + vb.geometry * 0.0015;
-              const spin = Math.sin(t * 0.31 + preset.id * 0.8) * (0.002 + beatK * 0.012) * preset.twist *
+              const spin = still ? 0 : Math.sin(t * 0.31 + preset.id * 0.8) * (0.002 + beatK * 0.012) * preset.twist *
                   (0.72 + mb.vsyncSpeed * 0.14 + mb.vsyncRoll * 0.14) * mb.phase;
               const fbAlpha = Math.min(0.24, preset.feedback * 0.48 + 0.025 * (0.5 + 0.5 * Math.sin(t * 0.47)) +
                   bass * 0.028 + mb.ghostWarp * 0.012 + mb.softEye * 0.008 +
@@ -6051,9 +6134,12 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               dst.translate(-w * 0.5, -h * 0.5);
               dst.globalCompositeOperation = 'soft-light';
               dst.globalAlpha = fbAlpha;
-              dst.filter = 'hue-rotate(' + (hueBase * 0.16 + mb.ghostChroma * 8 + vb.chroma * 18).toFixed(1) +
-                  'deg) saturate(' + (1.02 + mb.hardLight * 0.04 + vb.chroma * 0.12).toFixed(2) +
-                  ') blur(' + (0.22 + bass * 0.45 + mb.softEye * 0.08).toFixed(2) + 'px)';
+              /* tier 0 keeps the single feedback blur; tier 1 drops the blur;
+                 tier 2 runs the feedback crisp with no filter at all */
+              dst.filter = qualityTier >= 2 ? 'none' :
+                  'hue-rotate(' + (hueBase * 0.16 + mb.ghostChroma * 8 + vb.chroma * 18).toFixed(1) +
+                  'deg) saturate(' + (1.02 + mb.hardLight * 0.04 + vb.chroma * 0.12).toFixed(2) + ')' +
+                  (qualityTier === 0 ? ' blur(' + (0.22 + bass * 0.45 + mb.softEye * 0.08).toFixed(2) + 'px)' : '');
               dst.drawImage(milk.feedback, 0, 0, w, h); dst.restore(); dst.filter = 'none';
               /* Milkdrop-style polar waveforms driven by the EAR */
               const cx = w * 0.5, cy = h * 0.5, minDim = Math.min(w, h);
@@ -6087,9 +6173,15 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                   dst.lineWidth = Math.max(0.8, minDim * (0.0009 + ring * 0.00022) * Math.min(1.15, mb.ghostGlow));
                   dst.stroke();
               }
-              /* soft liquid blooms: layered radial gradients make the colour soup */
+              /* soft liquid blooms (petals): layered radial gradients make the
+                 colour soup. Phase 5 (FS-06): no filter blur in the petal loop —
+                 the gradients' own soft alpha stops carry the falloff, which is
+                 an order of magnitude faster on Canvas2D. The 0.78 damp keeps
+                 HARD LIGHT + MilkDrop from clipping white (first-class hardlight
+                 state arrives in Phase 6 — the body class is the live source). */
               dst.globalCompositeOperation = 'soft-light';
-              dst.filter = 'blur(' + (minDim * (0.005 + mb.softEye * 0.0015 + vb.texture * 0.0008)).toFixed(1) + 'px)';
+              const hardLightOn = document.body.classList.contains('hard-light');
+              const petalDamp = hardLightOn ? 0.78 : 1;
               const bloomCount = Math.max(2, Math.min(5, 2 + (preset.id % 3) + (vb.texture > 0.78 ? 1 : 0)));
               for (let i = 0; i < bloomCount; i++) {
                   const a = t * (0.18 + i * 0.025) + i * Math.PI * 0.4;
@@ -6101,10 +6193,14 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                       0.01 * Math.sin(t * 0.6 + i)));
                   const grad = dst.createRadialGradient(x, y, r * 0.05, x, y, r);
                   grad.addColorStop(0, 'hsla(' + ((hueBase + i * (45 + mb.ghostChroma * 9) + vb.chroma * 34) % 360).toFixed(1) +
-                      ',88%,' + Math.min(66, 52 + mb.hardLight * 3).toFixed(1) + '%,' +
-                      (0.030 + bass * 0.025 + vb.activity * 0.018).toFixed(3) + ')');
+                      ',88%,' + (Math.min(66, 52 + mb.hardLight * 3) * petalDamp).toFixed(1) + '%,' +
+                      ((0.030 + bass * 0.025 + vb.activity * 0.018) * petalDamp).toFixed(3) + ')');
                   grad.addColorStop(0.48, 'hsla(' + ((hueBase + i * 61 + 28 + vb.rhythm * 18) % 360).toFixed(1) +
-                      ',84%,52%,' + (0.016 + vb.texture * 0.010).toFixed(3) + ')');
+                      ',84%,' + (52 * petalDamp).toFixed(1) + '%,' +
+                      ((0.016 + vb.texture * 0.010) * petalDamp).toFixed(3) + ')');
+                  grad.addColorStop(0.8, 'hsla(' + ((hueBase + i * 61 + 28 + vb.rhythm * 18) % 360).toFixed(1) +
+                      ',84%,' + (46 * petalDamp).toFixed(1) + '%,' +
+                      ((0.007 + vb.texture * 0.005) * petalDamp).toFixed(3) + ')');
                   grad.addColorStop(1, 'hsla(0,0%,0%,0)');
                   dst.globalAlpha = 0.34; dst.fillStyle = grad; dst.beginPath(); dst.arc(x, y, r, 0, Math.PI * 2); dst.fill();
                   if (preset.mirror && i % 2 === 0) {
@@ -6114,10 +6210,20 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               dst.filter = 'none'; dst.restore();
               /* persist the composite for the next frame, then lay it on the voice canvas */
               fb.save(); fb.setTransform(1, 0, 0, 1, 0, 0); fb.clearRect(0, 0, w, h); fb.drawImage(milk.next, 0, 0); fb.restore();
+              /* Phase 5 (FS-06): honour the preset's authored composite op —
+                 'screen' / 'lighter' / 'soft-light' — modulated by the active
+                 AI-Warp mode's blendOp, scaled by the global masters, the
+                 Soft-Eye calm cap and the hard-light damp. */
+              const compositeOp = (isAiWarpActive && mb.blendOp && MILK_COMPOSITE_OPS[mb.blendOp])
+                  ? mb.blendOp
+                  : (MILK_COMPOSITE_OPS[preset.composite] ? preset.composite : 'screen');
+              let finalAlpha = clamp01(milk.opacity) * masterScale;
+              if (SOFT.enabled) finalAlpha *= lerp(0.58, 1.0, softK());
+              if (hardLightOn) finalAlpha *= 0.78;
               gctx.save(); gctx.setTransform(1, 0, 0, 1, 0, 0);
-              gctx.globalCompositeOperation = 'source-over'; gctx.filter = 'none';
-              gctx.globalAlpha = clamp01(milk.opacity);
-              if (gctx.globalAlpha > 0.001) gctx.drawImage(milk.next, 0, 0);
+              gctx.globalCompositeOperation = compositeOp; gctx.filter = 'none';
+              gctx.globalAlpha = clamp01(finalAlpha);
+              if (gctx.globalAlpha > 0.001) gctx.drawImage(milk.next, 0, 0, vw, vh);
               gctx.restore();
           }
 
@@ -6167,6 +6273,11 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                   : 'Toggle DROP THE MILK? — 80-preset Milkdrop-inspired feedback automation. Key: D';
               ui.milkBtn.classList.toggle('active', milk.active);
               ui.milkBtn.setAttribute('aria-pressed', String(milk.active));
+              ui.milkPrev.disabled = !milk.active;
+              ui.milkNext.disabled = !milk.active;
+              ui.milkHold.disabled = !milk.active;
+              ui.milkHold.classList.toggle('active', milk.active && milk.hold);
+              ui.milkHold.setAttribute('aria-pressed', String(milk.active && milk.hold));
               ui.milkSlider.value = milk.target.toFixed(2);
               ui.milkRead.textContent = Math.round(milk.target * 100) + '%';
               setAiwLock(ui.milkLock, voiceFxLocks.milkOpacity);
@@ -6222,9 +6333,21 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
 
               const buttons = make('div', 'aiw-buttons');
               const milkBtn = makeButton('aiw-button', 'DROP THE MILK? OFF');
+              milkBtn.id = 'aiwMilkBtn';
+              /* Phase 5 (FS-06): compact MilkDrop deck controls — previous /
+                 next preset and HOLD (freezes the ~18 s auto-advance). */
+              const milkPrev = makeButton('aiw-button', '\u25C0', 'Previous MilkDrop preset');
+              milkPrev.id = 'aiwMilkPrev';
+              const milkNext = makeButton('aiw-button', '\u25B6', 'Next MilkDrop preset');
+              milkNext.id = 'aiwMilkNext';
+              const milkHold = makeButton('aiw-button', 'HOLD', 'Freeze the MilkDrop auto-advance on the current preset');
+              milkHold.id = 'aiwMilkHold';
               const rollBtn = makeButton('aiw-button', 'ROLL FX', 'Randomize the unlocked B&W Strength and Hue Offset masters');
               const scopeBtn = makeButton('aiw-button', 'FX SCOPE: APP');
               buttons.appendChild(milkBtn);
+              buttons.appendChild(milkPrev);
+              buttons.appendChild(milkNext);
+              buttons.appendChild(milkHold);
               buttons.appendChild(rollBtn);
               buttons.appendChild(scopeBtn);
               sliderContainer.appendChild(buttons);
@@ -6232,7 +6355,9 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               const milkRow = make('div', 'slider-group aiw-row');
               const milkLabel = make('label', '', 'Milk Opacity:');
               const milkSlider = makeRange(0, 1, 0.01, 'DROP THE MILK? opacity');
+              milkSlider.id = 'aiwMilkOpacity';
               const milkRead = make('span', 'master-readout', '30%');
+              milkRead.id = 'aiwMilkOpacityRead';
               const milkLock = makeButton('lock-button', '<LOCK!>', 'Lock the Milk opacity against preset automation');
               const milkZero = makeButton('aiw-button', '0', 'Set the Milk opacity to 0%');
               [milkLabel, milkSlider, milkRead, milkLock, milkZero].forEach((el) => milkRow.appendChild(el));
@@ -6260,10 +6385,22 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               [hueLabel, hueSlider, hueRead, hueLock].forEach((el) => hueRow.appendChild(el));
               sliderContainer.appendChild(hueRow);
 
-              aiwUi = { milkBtn, rollBtn, scopeBtn, milkSlider, milkRead, milkLock, milkZero,
+              aiwUi = { milkBtn, milkPrev, milkNext, milkHold, rollBtn, scopeBtn,
+                  milkSlider, milkRead, milkLock, milkZero,
                   bwSlider, bwRead, bwPreview, bwLock, hueSlider, hueRead, huePreview, hueLock };
 
               milkBtn.addEventListener('click', toggleMilk);
+              milkPrev.addEventListener('click', () => { milkStep(-1); });
+              milkNext.addEventListener('click', () => { milkStep(1); });
+              milkHold.addEventListener('click', () => {
+                  if (!milk.active) return;
+                  milk.hold = !milk.hold;
+                  if (!milk.hold) milk.advanceAt = performance.now() + 18000;
+                  syncAiWarpMastersUi();
+                  showNotificationMessage(milk.hold
+                      ? 'DROP THE MILK? HOLD — auto-advance frozen on ' + (milk.preset ? milk.preset.name : 'preset')
+                      : 'DROP THE MILK? HOLD released — deck resumes', 2200);
+              });
               milkSlider.addEventListener('input', () => {
                   setMilkOpacity(parseFloat(milkSlider.value));
                   milkRead.textContent = Math.round(milk.target * 100) + '%';
@@ -10788,6 +10925,26 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                       }
                   } else {
                       stuckHighTimer['__bw50'] = 0;
+                  }
+              }
+
+              // 4. Phase 5 (FS-06): milk rides the washout guard too — a
+              // sustained MilkDrop + HSL Rainbow + Neon Grad stack is a
+              // white-out, so the milk target is pulled down after ~2.2 s.
+              // A hand-locked milk opacity (voiceFxLocks.milkOpacity) is never touched.
+              if (milk.active && !voiceFxLocks.milkOpacity) {
+                  const milkLevel = clamp01(milk.target);
+                  const chromaWash = (effectAlphas['HSL Rainbow'] || 0) + (effectAlphas['Neon Grad'] || 0);
+                  if (milkLevel > 0.55 && milkLevel + chromaWash > 1.9) {
+                      washoutPairTimer['__milkWash'] = (washoutPairTimer['__milkWash'] || 0) + dtMs;
+                      if (washoutPairTimer['__milkWash'] > 2200 * R16.washHold()) {
+                          milk.target = clamp01(Math.min(milk.target, 0.30 + Math.random() * 0.10));
+                          washoutPairTimer['__milkWash'] = 0;
+                          syncAiWarpMastersUi();
+                          scheduleVoiceFxSave();
+                      }
+                  } else {
+                      washoutPairTimer['__milkWash'] = Math.max(0, (washoutPairTimer['__milkWash'] || 0) - dtMs * 0.8);
                   }
               }
           }
