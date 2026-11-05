@@ -514,8 +514,9 @@
         /* randomizer target ceilings while calm (k = 0). Lerped to 1.0 at k = 1.
            Flash/Strobe calm caps must stay strictly within photosensitivity ceiling. */
         calmCaps: {
-            /* Lights — always capped well below hard ceilings */
-            'Flash': 0.14, 'Strobe': 0.08,
+            /* Lights — Soft-Eye calm holds both at 2%, far below the
+               0.20 / 0.35 hard ceilings (Phase 3 FS-02) */
+            'Flash': 0.02, 'Strobe': 0.02,
             /* Busy core voices */
             'Matrix ASCII': 0.52, 'ASCII': 0.56, 'Data Bomb': 0.52,
             'Gemini Bomb': 0.52, 'Matrix Chord': 0.64, 'Font Burn': 0.60,

@@ -327,3 +327,80 @@ test('Trigger reads the capped live level', () => {
     assert.match(functionSource('triggerTimedEffect'), /def\.factory\(\(\) => effectLiveStrength\(def\.name\)\)/);
     assert.match(functionSource('effectLiveStrength'), /lightCap\(name\)/);
 });
+
+/* Adds the one-shot Trigger machinery (Phase 3) on top of the light sandbox. */
+function triggerSandbox() {
+    const { sandbox, run } = lightSandbox();
+    run(functionSource('effectLiveStrength'));
+    run(functionSource('triggerTimedEffect'));
+    run(`
+        var activeEffects = [];
+        var continuousEffectCache = {};
+        var notified = [];
+        function showNotificationMessage(msg) { notified.push(msg); }
+        var clock = { now: 0 };
+        performance = { now: () => clock.now };
+        matchMedia = () => ({ matches: false });
+    `);
+    return { sandbox, run };
+}
+
+test('manual Trigger pulses Flash at most 0.20 with automation OFF, decays to 0 and never mutates effectAlphas', () => {
+    const { sandbox, run } = triggerSandbox();
+    sandbox.flashDef = { name: 'Flash', factory: (get) => () => get() };
+    sandbox.strobeDef = { name: 'Strobe', factory: (get) => () => get() };
+    assert.equal(run('lightAutomationOn'), false);
+    run('triggerTimedEffect(flashDef); triggerTimedEffect(strobeDef);');
+    assert.equal(run('effectAlphas.Flash || 0'), 0, 'the Flash slider level is never mutated');
+    assert.equal(run('effectAlphas.Strobe || 0'), 0, 'the Strobe slider level is never mutated');
+    const flashStart = run('effectLiveStrength("Flash")');
+    const strobeStart = run('effectLiveStrength("Strobe")');
+    assert.ok(flashStart > 0 && flashStart <= 0.20, `Flash pulse out of cap: ${flashStart}`);
+    assert.ok(strobeStart > 0 && strobeStart <= 0.35, `Strobe pulse out of cap: ${strobeStart}`);
+    run('clock.now = 1000;');
+    const flashMid = run('effectLiveStrength("Flash")');
+    assert.ok(flashMid > 0 && flashMid < flashStart, 'the pulse decays over its window');
+    run('clock.now = 2001;');
+    assert.equal(run('effectLiveStrength("Flash")'), 0, 'the pulse returns cleanly to 0 at expiry');
+    assert.equal(run('effectLiveStrength("Strobe")'), 0);
+    assert.equal(run('effectAlphas.Flash || 0'), 0);
+    assert.equal(run('effectAlphas.Strobe || 0'), 0);
+});
+
+test('ten rapid Trigger clicks never stack more than one live instance per voice', () => {
+    const { sandbox, run } = triggerSandbox();
+    let factoryCalls = 0;
+    sandbox.flashDef = { name: 'Flash', factory: (get) => { factoryCalls++; return () => get(); } };
+    run('for (let i = 0; i < 10; i++) triggerTimedEffect(flashDef);');
+    assert.equal(factoryCalls, 1, 'the factory runs once');
+    assert.equal(run('activeEffects.length'), 1, 'one live instance only');
+    assert.equal(run('Object.keys(timedActiveMap).length'), 1, 'one deduped entry only');
+    assert.ok(run('effectLiveStrength("Flash")') <= 0.20, 'the stacked pulse never exceeds the cap');
+    /* With a continuous instance active, Trigger only refreshes the envelope. */
+    let strobeFactoryCalls = 0;
+    sandbox.strobeDef = { name: 'Strobe', factory: (get) => { strobeFactoryCalls++; return () => get(); } };
+    run('continuousEffectCache.Strobe = function () {};');
+    run('for (let i = 0; i < 10; i++) triggerTimedEffect(strobeDef);');
+    assert.equal(strobeFactoryCalls, 0, 'a running continuous instance is never doubled');
+    assert.equal(run('activeEffects.length'), 1, 'no extra instance was pushed');
+    assert.ok(run('timedPulseUntil.Strobe') > 0, 'the envelope was refreshed instead');
+});
+
+test("in the 'virtual' realm with SOFT-EYE fully calm the wander stays at or under 0.02 and rests at exactly 0", () => {
+    const { sandbox, run } = lightSandbox();
+    run('softK = () => 0; isAiWarpActive = true;');
+    sandbox.setLightAutomation(true);
+    let sawFlashMoving = false;
+    let flashRested = false;
+    for (let tick = 1; tick <= 90 * HZ; tick++) {
+        sandbox.stepLightWander(tick * 1000 / HZ, 1 / HZ);
+        const flash = run('effectAlphas.Flash || 0');
+        const strobe = run('effectAlphas.Strobe || 0');
+        assert.ok(flash <= 0.02 + 1e-9, `Flash left the calm cap at tick ${tick}: ${flash}`);
+        assert.ok(strobe <= 0.02 + 1e-9, `Strobe left the calm cap at tick ${tick}: ${strobe}`);
+        if (flash > 0.005) sawFlashMoving = true;
+        if (sawFlashMoving && flash === 0) flashRested = true;
+    }
+    assert.ok(sawFlashMoving, 'Flash should still move inside the calm cap');
+    assert.ok(flashRested, 'a rest roll should land Flash on exactly 0');
+});

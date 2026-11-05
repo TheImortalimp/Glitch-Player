@@ -5180,6 +5180,30 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
           const lightStoppedByUser = {};
           const lightWanderAt = {};
           const lightWanderTarget = {};
+          /* Phase 3 (FS-01): transient one-shot Trigger envelope. The pulse is
+             read by effectLiveStrength and decays linearly to 0 at
+             timedPulseUntil[name] — effectAlphas is never mutated, so a slider
+             parked at 0 genuinely stays at 0 after the pulse. Lights are hard
+             capped at 0.20 / 0.35 through clampLight. */
+          const TIMED_PULSE_MS = 2000;
+          const timedPulseUntil = {};
+          const timedPulsePeak = {};
+          /* At most ONE live one-shot factory instance per voice (dedup for
+             rapid Trigger clicks — luminance can never stack 2x-5x). */
+          const timedActiveMap = {};
+          function timedPulseLevel(name) {
+              const until = +timedPulseUntil[name] || 0;
+              if (until <= 0) return 0;
+              const now = (typeof performance !== 'undefined' && performance.now) ?
+                  performance.now() : Date.now();
+              if (now >= until) {
+                  timedPulseUntil[name] = 0;
+                  timedPulsePeak[name] = 0;
+                  return 0;
+              }
+              const peak = clampLight(name, +timedPulsePeak[name] || 0);
+              return peak * Math.min(1, Math.max(0, (until - now) / TIMED_PULSE_MS));
+          }
           function lightCap(name) {
               return Object.prototype.hasOwnProperty.call(LIGHT_CEILING, name) ? LIGHT_CEILING[name] : Infinity;
           }
@@ -5251,28 +5275,32 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                       rollLightTrait(name);
                       const lt = lightTrait[name];
                       lightWanderAt[name] = now + 1200 + Math.random() * 2800;
-                      /* Phase 3 fix (FS-02): rest rolls skip confineTarget entirely so
-                         lights actually reach 0.000. confineTarget is applied AFTER
-                         softCap so SOFT-EYE calm (softK=0) can hold lights at 0.02
-                         without confineTarget lifting a 0 rest back to the band floor. */
+                      /* Phase 3 fix (FS-02), roadmap order: rest rolls first (t = 0,
+                         skipping confineTarget entirely so resting lights actually
+                         ease all the way to 0.000); otherwise confineTarget first,
+                         then mutual-peak ducking, then the SOFT-EYE calm cap, and
+                         clampLight always last — in calm (softK = 0) the lights can
+                         never exceed 0.02, even in the 'virtual' realm. */
                       let t;
                       if (Math.random() < lt.rest) {
                           /* genuine rest — skip all confinement, target is exactly 0 */
                           t = 0;
                       } else {
                           t = Math.pow(Math.random(), lt.pow) * lightCap(name);
-                          /* duck while the other light is near its ceiling */
-                          const other = name === 'Flash' ? 'Strobe' : 'Flash';
-                          if ((effectAlphas[other] || 0) > 0.5 * lightCap(other)) t *= 0.4;
-                          /* apply soft-eye calm cap BEFORE confineTarget */
-                          if (eng && eng.softCap) t = eng.softCap(name, t, softK());
-                          /* confineTarget after softCap — can never re-lift a 0 rest */
+                          /* realm confinement first — light bands are hard-bounded
+                             at the 0.20 / 0.35 ceilings in BOTH realms */
                           if (eng && eng.confineTarget) {
                               t = eng.confineTarget(name, t, {
                                   ghost: getGhostMode(), vsync: getVsyncMode(),
                                   warp: isAiWarpActive, bw: bwMasterLevel()
                               });
                           }
+                          /* duck while the other light is near its ceiling */
+                          const other = name === 'Flash' ? 'Strobe' : 'Flash';
+                          if ((effectAlphas[other] || 0) > 0.5 * lightCap(other)) t *= 0.4;
+                          /* SOFT-EYE calm cap after confinement — calm genuinely
+                             holds the light at its 0.02 ceiling */
+                          if (eng && eng.softCap) t = eng.softCap(name, t, softK());
                       }
                       lightWanderTarget[name] = clampLight(name, t);
                   }
@@ -5515,9 +5543,12 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
 
           function effectLiveStrength(name) {
               const a = +(effectAlphas[name] || 0);
-              if (a <= 0) return 0;
+              /* Phase 3 (FS-01): a manual Trigger rides a transient envelope that
+                 decays to 0 — it never touches effectAlphas. */
+              const pulse = timedPulseLevel(name);
+              if (a <= 0 && pulse <= 0) return 0;
               const intensity = masterControls ? Math.max(0.05, +masterControls.effectIntensity || 1) : 1;
-              const live = a * Math.max(0, +masterOpacity || 0) * intensity;
+              const live = Math.max(a, pulse) * Math.max(0, +masterOpacity || 0) * intensity;
               const sm = smoothedStrength[name];
               const level = Math.min(lightCap(name), (sm === undefined) ? live : Math.max(+sm || 0, live));
               return isManualLight(name) ? level * lightOutputGate() : level;
@@ -5543,6 +5574,13 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                           continuousEffectCache[name] = cached;
                       }
                       if (activeEffects.indexOf(cached) === -1) activeEffects.push(cached);
+                      /* Phase 3 (FS-01): the continuous instance supersedes any
+                         one-shot Trigger instance — one instance per voice. */
+                      if (timedActiveMap[name]) {
+                          const tIdx = activeEffects.indexOf(timedActiveMap[name]);
+                          if (tIdx > -1) activeEffects.splice(tIdx, 1);
+                          delete timedActiveMap[name];
+                      }
                   } else if (cached) {
                       const idx = activeEffects.indexOf(cached);
                       if (idx > -1) activeEffects.splice(idx, 1);
@@ -6270,25 +6308,53 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
           });
 
           function triggerTimedEffect(def) {
+              const now = (typeof performance !== 'undefined' && performance.now) ?
+                  performance.now() : Date.now();
               if (isManualLight(def.name)) {
-                  if (!lightAutomationOn) {
-                      showNotificationMessage(def.name + ' outputs only while Flash & Strobe (automatic) is ON. Turn that switch on first.', 3800);
+                  /* Phase 3 (FS-01): manual Trigger is an explicit one-shot pulse
+                     that works with the automation switch ON or OFF. It rides the
+                     transient timedPulseUntil/timedPulsePeak envelope read by
+                     effectLiveStrength — effectAlphas is NEVER mutated, so a 0
+                     slider stays at 0 after the pulse. The pulse peaks at the
+                     photosensitivity hard cap (0.20 Flash / 0.35 Strobe), scaled
+                     on-screen by masterOpacity, and is gated by
+                     prefers-reduced-motion and a live master opacity. */
+                  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                      showNotificationMessage(def.name + ' pulse skipped: reduced motion is on.', 2600);
                       return;
                   }
-                  if (!(effectAlphas[def.name] > 0)) {
-                      showNotificationMessage('Raise the ' + def.name + ' slider explicitly before triggering it.', 3500);
-                      return;
-                  }
-                  activeEffects.push(def.factory(() => effectLiveStrength(def.name)));
+                  if (!((+masterOpacity || 0) > 0.001)) return;
+                  timedPulsePeak[def.name] = clampLight(def.name, lightCap(def.name));
+                  timedPulseUntil[def.name] = now + TIMED_PULSE_MS;
+                  /* Dedup: a running continuous instance already reads
+                     effectLiveStrength — refreshing the envelope is enough. */
+                  if (continuousEffectCache[def.name]) return;
+                  if (timedActiveMap[def.name] &&
+                      activeEffects.indexOf(timedActiveMap[def.name]) !== -1) return;
+                  const inst = def.factory(() => effectLiveStrength(def.name));
+                  timedActiveMap[def.name] = inst;
+                  activeEffects.push(inst);
                   return;
               }
               const profile = blendProfiles[def.name];
               const floorMin = profile ? profile.ambient[1] + (profile.peak[1] - profile.ambient[1]) * 0.35 : 0.2;
               const floorMax = profile ? profile.peak[1] : 0.4;
               const pulseFloor = clamp01(floorMin + Math.random() * Math.max(0, floorMax - floorMin));
+              /* Phase 3 (FS-01): one factory instance per voice. An active
+                 continuous instance takes the pulse through its envelope; a live
+                 one-shot instance is never doubled by rapid clicks. */
+              if (continuousEffectCache[def.name]) {
+                  timedPulsePeak[def.name] = Math.max(+timedPulsePeak[def.name] || 0, pulseFloor);
+                  timedPulseUntil[def.name] = now + TIMED_PULSE_MS;
+                  return;
+              }
+              if (timedActiveMap[def.name] &&
+                  activeEffects.indexOf(timedActiveMap[def.name]) !== -1) return;
               const getStrength = () => Math.max(smoothedStrength[def.name] || (effectAlphas[def.name] *
                   masterOpacity), pulseFloor);
-              activeEffects.push(def.factory(getStrength));
+              const inst = def.factory(getStrength);
+              timedActiveMap[def.name] = inst;
+              activeEffects.push(inst);
           }
 
           /* ------------------------------------------------------------------ *
@@ -8990,6 +9056,10 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               autoGlitchInstances.length = 0;
               /* VA-05 fix: clear ALL active effects, not just auto-glitch instances */
               activeEffects.length = 0;
+              /* Phase 3 (FS-01): kill one-shot Trigger pulses and their deduped
+                 instances so nothing re-lights after ZERO ALL */
+              for (const k in timedActiveMap) delete timedActiveMap[k];
+              for (const k in timedPulseUntil) { timedPulseUntil[k] = 0; timedPulsePeak[k] = 0; }
               nextUnparkAt = performance.now() + 60000;
 
               // 8. Sync button labels
@@ -10504,11 +10574,13 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
            * ------------------------------------------------------------------ */
           const WASHOUT_PAIRS = [
               // [effectA, effectB, alphaSum trigger, holdMs before pulling]
-              ['Flash',     'Strobe',      1.20,  1200],   // brief double-flash OK, 1.2s max
-              ['Flash',     'HSL Rainbow', 1.40,  2000],   // colourful flashes fine for 2s
-              ['Strobe',    'HSL Rainbow', 1.10,  1500],   // vivid strobe + rainbow, 1.5s max
-              ['B&W Invert','Flash',       1.30,  1000],   // white-out alert, 1s max
-              ['B&W Invert','Strobe',      1.20,  1000]    // desaturated strobe, 1s max
+              // Phase 3 (FS-03): thresholds recalibrated to levels the capped
+              // lights (Flash 0.20 / Strobe 0.35) can physically reach.
+              ['Flash',     'Strobe',      0.38,  1200],   // both near ceiling > 1.2s
+              ['Flash',     'HSL Rainbow', 0.95,  2000],   // colourful flashes fine for 2s
+              ['Strobe',    'HSL Rainbow', 1.05,  1500],   // vivid strobe + rainbow, 1.5s max
+              ['B&W Invert','Flash',       0.90,  1000],   // white-out alert, 1s max
+              ['B&W Invert','Strobe',      0.98,  1000]    // desaturated strobe, 1s max
           ];
           // Duration each pair has been above its trigger sum
           const washoutPairTimer = {};
@@ -10550,10 +10622,17 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               }
 
               // 2. Duration-based washout-pair guard
+              /* Phase 3 (FS-03): a light may be pulled down only through its
+                 wander target, and only while lightAutomationOn is true and the
+                 slider is not user-locked. Manual / preset light levels are never
+                 touched while the automation switch is OFF. */
+              const pullHeld = (nm) => isManualLight(nm)
+                  ? (!lightAutomationOn || !!sliderLocks[nm])
+                  : automationHeld(nm);
               for (let p = 0; p < WASHOUT_PAIRS.length; p++) {
                   const [a, b, sumTrigger, holdMs] = WASHOUT_PAIRS[p];
                   const key = a + '|' + b;
-                  if (automationHeld(a) && automationHeld(b)) { washoutPairTimer[key] = 0; continue; }
+                  if (pullHeld(a) && pullHeld(b)) { washoutPairTimer[key] = 0; continue; }
                   if (bwSweepActive && (a === 'B&W Invert' || b === 'B&W Invert')) { washoutPairTimer[key] = 0; continue; }
                   /* v11: warp-blend pairs are no longer skipped while AI Warp is
                      active — they get a 2.5x hold window instead, so B&W/Flash/Strobe/
@@ -10573,19 +10652,26 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                       washoutPairTimer[key] = (washoutPairTimer[key] || 0) + dtMs;
                       if (washoutPairTimer[key] > effectiveHold) {
                           // Pull the weaker unlocked effect back to ambient
-                          const suppA = !automationHeld(a) && aVal <= bVal;
+                          const suppA = !pullHeld(a) && aVal <= bVal;
                           const pullTarget = (nm) => {
                               const pr = blendProfiles[nm];
                               return pr ? clamp01(randRange(pr.ambient) * R16.ambientK()) : 0.04;
                           }; /* R1.7: energy sets the floor */
-                          if (suppA && !automationHeld(a)) {
-                              randomTargets[a] = pullTarget(a);
-                              effectAlphas[a] = easeExp(aVal, randomTargets[a], dt, 1.0);
-                              if (sliderElements[a]) sliderElements[a].value = effectAlphas[a].toFixed(3);
-                          } else if (!automationHeld(b)) {
-                              randomTargets[b] = pullTarget(b);
-                              effectAlphas[b] = easeExp(bVal, randomTargets[b], dt, 1.0);
-                              if (sliderElements[b]) sliderElements[b].value = effectAlphas[b].toFixed(3);
+                          const applyPull = (nm, cur) => {
+                              if (isManualLight(nm)) {
+                                  /* Phase 3 (FS-03): lights route through the wander
+                                     target only — never the manual slider level. */
+                                  lightWanderTarget[nm] = clampLight(nm, pullTarget(nm));
+                                  return;
+                              }
+                              randomTargets[nm] = pullTarget(nm);
+                              effectAlphas[nm] = easeExp(cur, randomTargets[nm], dt, 1.0);
+                              if (sliderElements[nm]) sliderElements[nm].value = effectAlphas[nm].toFixed(3);
+                          };
+                          if (suppA && !pullHeld(a)) {
+                              applyPull(a, aVal);
+                          } else if (!pullHeld(b)) {
+                              applyPull(b, bVal);
                           }
                           washoutPairTimer[key] = 0;
                       }
@@ -10891,6 +10977,9 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                       const group = AESTHETIC_GROUPS[aestheticBurstGroupKey];
                       const allEffects = (group.effects || []).concat(group.suppress || []);
                       allEffects.forEach((name) => {
+                          /* Phase 3 (FS-03): bursts never write randomTargets for the
+                             manual lights — Flash / Strobe belong to the wander only. */
+                          if (isManualLight(name)) return;
                           if (automationHeld(name)) return;
                           const profile = blendProfiles[name];
                           randomTargets[name] = profile
