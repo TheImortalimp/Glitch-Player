@@ -1054,7 +1054,8 @@ body.playback-on #preset-toggle-btn {
     color: #00251d !important;
     text-shadow: none !important;
 }
-#presetAutoBtn.auto-on {
+#presetAutoBtn.auto-on,
+#glyphAutoBtn.auto-on {
     color: #00281f !important;
     background: linear-gradient(180deg, #23ffe3, #00d8b4) !important;
     border-color: #7dfff0 !important;

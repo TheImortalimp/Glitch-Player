@@ -68,32 +68,81 @@ const SignalGlyphs = (()=>{
  /* The main ASCII voice always takes the selected table. Every other glyph
     voice takes its own table, rotated forward from the selection by a fixed
     offset, so the sub-voices mix and match instead of all repeating one table. */
- const VOICE_OFFSETS=Object.freeze({'ASCII':0,'Cyber Rain':1,'R3 ASCII':2,'Matrix ASCII':3,'Matrix Chord':4,'R3 Matrix ASCII':5,'R3 Matrix Chord':6,'Data Bomb':7,'R3 Data Bomb':8});
+ const VOICE_OFFSETS=Object.freeze({'ASCII':0,'R3 ASCII':1,'Matrix ASCII':2,'R3 Matrix ASCII':3,'Matrix Chord':4,'R3 Matrix Chord':5,'Cyber Rain':6,'Data Bomb':7,'R3 Data Bomb':8,'Ink Glyphs':9,'R3 Ink Glyphs':10,'Font Burn':11,'R3 Font Burn':12});
  const voices=Object.freeze(Object.keys(VOICE_OFFSETS));
  const ALL_SAMPLE=8;
  let current=ENGINE, version=0, stamp=0, voice=null;
  const voiceSets=Object.create(null);
  const safeRandom=rng=>Math.min(.999999999,Math.max(0,Number((rng||Math.random)())||0));
+ /* Phase 1 — runtime font-coverage probe. A 24x24 offscreen canvas renders 3
+    sample code points per table in the HUD/canvas font stack and compares the
+    pixel signature against the U+FFFD / U+FFFF .notdef tofu reference. Tables
+    the host OS cannot draw land in unfontedNames and leave every random pool.
+    Headless stubs without a real 2D canvas skip the probe cleanly: every
+    table stays renderable, so deterministic tests see the full set. */
+ const PROBE_FONT='20px "Courier New", "Segoe UI Symbol", "Segoe UI Historic", "Microsoft YaHei", "Malgun Gothic", monospace';
+ const probeFontCoverage=()=>{
+  try{
+   if(typeof document==='undefined'||typeof document.createElement!=='function')return null;
+   const canvas=document.createElement('canvas');
+   if(!canvas||typeof canvas.getContext!=='function')return null;
+   canvas.width=24;canvas.height=24;
+   const ctx=canvas.getContext('2d',{willReadFrequently:true});
+   if(!ctx||typeof ctx.fillText!=='function'||typeof ctx.getImageData!=='function')return null;
+   const sig=ch=>{
+    ctx.clearRect(0,0,24,24);ctx.font=PROBE_FONT;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#fff';
+    ctx.fillText(ch,12,12);
+    const d=ctx.getImageData(0,0,24,24).data;
+    let h=0x811c9dc5,blank=true;
+    for(let i=0;i<d.length;i++){const b=d[i];if(b)blank=false;h=Math.imul(h^b,0x01000193);}
+    return blank?'':(h>>>0).toString(16);
+   };
+   const notdef=new Set();
+   const refA=sig('\ufffd');if(refA)notdef.add(refA);
+   const refB=sig('\uffff');if(refB)notdef.add(refB);
+   const renderable=[],unfonted=[];
+   names.forEach(name=>{
+    const chars=banks[name];
+    const picks=[chars[0],chars[chars.length>>1],chars[chars.length-1]];
+    let ok=0;
+    for(const ch of picks){const s=sig(ch);if(s&&!notdef.has(s))ok++;}
+    (ok>=2?renderable:unfonted).push(name);
+   });
+   if(!renderable.length)return null;
+   return {renderable,unfonted};
+  }catch(e){return null;}
+ };
+ const probed=probeFontCoverage();
+ const renderableNames=Object.freeze(probed?probed.renderable.slice():names.slice());
+ const unfontedNames=Object.freeze(probed?probed.unfonted.slice():[]);
+ /* Phase 1 — seeded 'All scripts' sampler: mulberry32 over an avalanche-mixed
+    seed (GlitchEngine's PRNG when present, a local twin when the library is
+    loaded alone in a stub). reseed()/reshuffleAllScripts() redraw the mix. */
+ const hash32=input=>{const E=window.GlitchEngine;if(E&&typeof E.hashSeed==='function')return E.hashSeed(input);const s=String(input);let h=2166136261;for(let i=0;i<s.length;i++){h=Math.imul(h^s.charCodeAt(i),16777619);h^=h>>>15;}return (h>>>0)||1;};
+ const rng32=seed=>{const E=window.GlitchEngine;if(E&&typeof E.mulberry32==='function')return E.mulberry32(seed>>>0);let a=seed>>>0;return function(){a=(a+0x6D2B79F5)|0;let t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return ((t^(t>>>14))>>>0)/4294967296;};};
+ let allSeed=1;
  const pickBank=(name,rng)=>{const chars=banks[name];if(!chars||!chars.length)return '#';const ch=chars[Math.floor(safeRandom(rng)*chars.length)];return ch===' '?'·':ch;};
  const offsetOf=v=>Object.prototype.hasOwnProperty.call(VOICE_OFFSETS,v)?VOICE_OFFSETS[v]:0;
- const tableFor=v=>{if(current===ENGINE||current===ALL)return current;return names[(names.indexOf(current)+offsetOf(v))%names.length];};
+ const tableFor=v=>{if(current===ENGINE||current===ALL)return current;const pool=renderableNames.indexOf(current)>=0?renderableNames:names;return pool[(pool.indexOf(current)+offsetOf(v))%pool.length];};
  const sourceFor=(v,fallback)=>{
   if(current===ENGINE)return Array.isArray(fallback)&&fallback.length?fallback:(typeof originalEngineGlyphBank==='function'?originalEngineGlyphBank():[]);
-  if(current===ALL){const out=[];names.forEach(name=>{const chars=banks[name];for(let k=0;k<ALL_SAMPLE&&chars.length;k++)out.push(chars[Math.floor(Math.random()*chars.length)]);});return out;}
+  if(current===ALL){const out=[],rand=rng32(hash32(String(allSeed)+'\u00a7'+String(v)));renderableNames.forEach(name=>{const chars=banks[name];for(let k=0;k<ALL_SAMPLE&&chars.length;k++)out.push(chars[Math.floor(safeRandom(rand)*chars.length)]);});return out;}
   return banks[tableFor(v)]||[];
  };
  // Fills in place, so a voice that captured its array follows the selection
  // as long as it calls setFor again before painting.
  const fill=(target,source)=>{let n=0;for(let i=0;i<source.length;i++){const ch=source[i];if(typeof ch==='string'&&ch&&!/^\s+$/u.test(ch))target[n++]=ch;}target.length=n;if(!n){target[0]='0';target[1]='1';}target.glyphVersion=++stamp;};
- return {names, banks, voices, integrity:GLYPH_TABLES.integrity,
+ return {names, banks, voices, renderableNames, unfontedNames, integrity:GLYPH_TABLES.integrity,
   get current(){return current},
   get version(){return version},
   get voice(){return voice},
-  set(name){const next=(name===ALL||name===ENGINE||banks[name])?name:ENGINE;if(next!==current){current=next;version++;}const select=document.getElementById('glyph-bank');if(select)select.value=current;updateGlyphCount();},
+  set(name,opts){let next=(name===ALL||name===ENGINE||banks[name])?name:ENGINE;if(opts&&opts.fallbackRenderable&&next!==ALL&&next!==ENGINE&&unfontedNames.indexOf(next)>=0&&renderableNames.length){next=renderableNames[hash32(next)%renderableNames.length];}if(next!==current){current=next;version++;}const select=document.getElementById('glyph-bank');if(select)select.value=current;updateGlyphCount();},
+  reseed(seed){allSeed=(seed===undefined||seed===null)?hash32(String(allSeed)+'+'):seed;version++;return allSeed;},
+  reshuffleAllScripts(seed){return this.reseed(seed);},
   tableFor,
   rotation(){return voices.map(v=>({voice:v,table:tableFor(v)}));},
   setFor(v,fallback){const key=String(v||'ASCII');const fb=Array.isArray(fallback)?fallback:null;let entry=voiceSets[key];if(!entry)entry=voiceSets[key]={glyphs:[],version:-1,fallback:null};if(entry.version!==version||entry.fallback!==fb){fill(entry.glyphs,sourceFor(key,fb));entry.version=version;entry.fallback=fb;}return entry.glyphs;},
-  pickFor(v,rng,realm,toneIndex){if(current===ENGINE&&typeof originalEnginePickGlyph==='function'){const glyph=originalEnginePickGlyph(realm,rng,toneIndex);if(typeof glyph==='string'&&Array.from(glyph).length)return glyph;}if(current===ALL){const name=names[Math.floor(safeRandom(rng)*names.length)];return pickBank(name,rng);}return pickBank(tableFor(v),rng);},
+  pickFor(v,rng,realm,toneIndex){if(current===ENGINE&&typeof originalEnginePickGlyph==='function'){const glyph=originalEnginePickGlyph(realm,rng,toneIndex);if(typeof glyph==='string'&&Array.from(glyph).length)return glyph;}if(current===ALL){const name=renderableNames[Math.floor(safeRandom(rng)*renderableNames.length)];return pickBank(name,rng);}return pickBank(tableFor(v),rng);},
   pick(rng,realm,toneIndex){return this.pickFor(voice||'ASCII',rng,realm,toneIndex);},
   withVoice(v,fn){const previous=voice;voice=v?String(v):null;try{return fn();}finally{voice=previous;}},
   get count(){return current===ALL?names.reduce((n,k)=>n+banks[k].length,0):current===ENGINE?0:banks[current].length;}};
@@ -104,7 +153,7 @@ window.SignalGlyphs=SignalGlyphs;
 // the voice painting at the time (SignalGlyphs.withVoice) picks its rotated table.
 if(window.GlitchEngine){window.GlitchEngine.pickGlyph=(realm,rng,toneIndex)=>SignalGlyphs.pick(rng,realm,toneIndex);window.GlitchEngine.glyphBank=(realm)=>SignalGlyphs.current==='Engine realms (Revision 3)'?(typeof originalEngineGlyphBank==='function'?originalEngineGlyphBank(realm):[]):SignalGlyphs.current==='All scripts'?SignalGlyphs.names.flatMap(n=>SignalGlyphs.banks[n]):SignalGlyphs.banks[SignalGlyphs.tableFor(SignalGlyphs.voice||'ASCII')].slice();}
 const glyphSelect=document.getElementById('glyph-bank');
-if(glyphSelect){const engineOption=document.createElement('option');engineOption.value='Engine realms (Revision 3)';engineOption.textContent=engineOption.value;glyphSelect.appendChild(engineOption);const allOption=document.createElement('option');allOption.value='All scripts';allOption.textContent='All scripts';glyphSelect.appendChild(allOption);SignalGlyphs.names.forEach(name=>{const opt=document.createElement('option');opt.value=name;opt.textContent=name+' ('+SignalGlyphs.banks[name].length+')';glyphSelect.appendChild(opt)});glyphSelect.value=SignalGlyphs.current;}
+if(glyphSelect){const engineOption=document.createElement('option');engineOption.value='Engine realms (Revision 3)';engineOption.textContent=engineOption.value;glyphSelect.appendChild(engineOption);const allOption=document.createElement('option');allOption.value='All scripts';allOption.textContent='All scripts';glyphSelect.appendChild(allOption);SignalGlyphs.names.forEach(name=>{const opt=document.createElement('option');opt.value=name;opt.textContent=name+' ('+SignalGlyphs.banks[name].length+')'+(SignalGlyphs.unfontedNames.indexOf(name)>=0?' [no system font]':'');glyphSelect.appendChild(opt)});glyphSelect.value=SignalGlyphs.current;}
 function updateGlyphCount(){
  const info=document.getElementById('glyph-info');if(!info)return;
  const G=SignalGlyphs, I=G.integrity;

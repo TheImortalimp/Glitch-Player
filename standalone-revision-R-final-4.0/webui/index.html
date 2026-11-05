@@ -146,6 +146,9 @@
         <div class="preset-bar">
             <label for="glyph-bank">Glyph bank:</label>
             <select id="glyph-bank" title="Choose the glyph source"></select>
+            <button id="glyphRandBtn" type="button" title="Glyph Roll — pick a random renderable glyph bank now (10% Engine realms, 10% All scripts, 80% a specific script)">Glyph Roll</button>
+            <button id="glyphAutoBtn" type="button" title="Glyph Auto — cycle random renderable glyph banks every 12–24s (5–9s in a crescendo) while playback is on">Glyph Auto: OFF</button>
+            <button id="glyphLockBtn" type="button" class="lock-button" title="Hard-lock the current glyph table against presets, preset auto, Randomize All, Random Seed and Glyph Auto">&lt;LOCK!&gt;</button>
             <span id="glyph-info" aria-live="polite"></span>
             <div class="current-preset-display" id="current-preset-display">NO PRESET LOADED</div>
             <select id="presetSelect" title="Preset list"></select>

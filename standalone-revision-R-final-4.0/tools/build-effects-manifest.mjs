@@ -14,6 +14,9 @@ const PROJECTOR = ['Chromatic Echo', 'Temporal Slices', 'Signal Tear', 'Cyber Ra
     'VHS Glitch', 'R3 Ghost Spectrum', 'R3 V-Sync'];
 const AI_WARP = ['Rolling Scan', 'Tape Grain', 'Tracking Tear', 'R3 B&W Invert', 'R3 Hue/Color Cycle'];
 const CAPS = { Flash: 0.2, Strobe: 0.35 };
+/* The 13 text/glyph voices routed through SignalGlyphs (Phase 1). */
+const GLYPH_VOICES = ['ASCII', 'R3 ASCII', 'Matrix ASCII', 'R3 Matrix ASCII', 'Matrix Chord', 'R3 Matrix Chord',
+    'Cyber Rain', 'Data Bomb', 'R3 Data Bomb', 'Ink Glyphs', 'R3 Ink Glyphs', 'Font Burn', 'R3 Font Burn'];
 
 export function buildManifest(source) {
     const block = (start, end) => {
@@ -44,6 +47,7 @@ export function buildManifest(source) {
         cap: CAPS[def.name.replace(/^R3 /, '')] ?? 1,
         transition: transition(def.name),
         photosensitive: Object.hasOwn(CAPS, def.name.replace(/^R3 /, '')),
+        glyphVoice: GLYPH_VOICES.includes(def.name),
         blendProfile: profiles[def.name] || null,
     });
     const voices = [...defs('timedEffectsDefs').map(voice('timed')), ...defs('masterEffectsDefs').map(voice('master'))];

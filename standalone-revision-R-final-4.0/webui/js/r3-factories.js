@@ -119,6 +119,52 @@
         get canvas() { return dataBombAtlas().canvas; }
     };
     let tintAtlas = null;
+    /* Phase 1 glyph routing for the two text voices whose verbatim factories
+       bank their own alphabets (Ink Glyphs, Font Burn). While one of them
+       paints and a glyph table is selected, a thin context wrapper remaps the
+       text of fillText/strokeText onto the voice's rotated table — the
+       verbatim factory source itself stays untouched. The mapping is
+       deterministic per input character, so a held stamp keeps its glyph. */
+    const GLYPH_TEXT_VOICES = { 'Ink Glyphs': true, 'Font Burn': true };
+    const routedCtxCache = typeof WeakMap === 'function' ? new WeakMap() : null;
+    function glyphRouteText(text) {
+        const voice = glyphVoice;
+        if (!voice || !GLYPH_TEXT_VOICES[voice]) return text;
+        const G = glyphApi();
+        if (!G || G.current === 'Engine realms (Revision 3)') return text;
+        const set = G.setFor('R3 ' + voice, R3_ATLAS_CHARS);
+        if (!set.length) return text;
+        const chars = Array.from(String(text));
+        let out = '';
+        for (let i = 0; i < chars.length; i++) {
+            const ch = chars[i];
+            if (ch === ' ' || ch === '-') { out += ch; continue; }
+            out += set[(ch.codePointAt(0) + i * 7) % set.length];
+        }
+        return out;
+    }
+    function routedGlyphContext(context) {
+        if (!context) return context;
+        if (routedCtxCache) {
+            const hit = routedCtxCache.get(context);
+            if (hit) return hit;
+        }
+        const wrapped = new Proxy(context, {
+            get(target, key) {
+                const value = target[key];
+                if ((key === 'fillText' || key === 'strokeText') && typeof value === 'function') {
+                    return function (text) {
+                        const args = Array.prototype.slice.call(arguments, 1);
+                        return value.call(target, glyphRouteText(text), ...args);
+                    };
+                }
+                return typeof value === 'function' ? value.bind(target) : value;
+            },
+            set(target, key, value) { target[key] = value; return true; }
+        });
+        if (routedCtxCache) routedCtxCache.set(context, wrapped);
+        return wrapped;
+    }
 
     const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, +v || 0));
     const clamp01 = (v) => clamp(v, 0, 1);
@@ -2837,6 +2883,9 @@
             } : render;
         return function renderGC3Voice(context, now) {
             bindR3Context(engine, context, now || performance.now());
+            /* Phase 1: the two banked-alphabet text voices paint through the
+               glyph-routed context so a selected table reaches them too. */
+            if (GLYPH_TEXT_VOICES[baseName]) gctx = routedGlyphContext(context);
             const size = clamp(engine.sizeFor(baseName + GC3_SUFFIX), 0.2, 3);
             currentDepth = clamp01(engine.depthFor(baseName + GC3_SUFFIX));
             if (engine.liveAlpha(baseName + GC3_SUFFIX) <= 0.001 || currentDepth <= 0.001) return;

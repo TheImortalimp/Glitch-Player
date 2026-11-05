@@ -478,8 +478,10 @@
           let isAutomatedMasters = false;
           let randomTargets = {};
           /* 'global' is seeded so saved global-opacity locks survive preset
-             normalization (which keeps only known lock keys). */
-          const sliderLocks = { global: false };
+             normalization (which keeps only known lock keys). 'glyphBank' is
+             the Phase 1 glyph-table hard lock (presets, preset auto,
+             Randomize All, Random Seed and Glyph Auto all respect it). */
+          const sliderLocks = { global: false, glyphBank: false };
           /* Locks switched on by the last applied preset. Those are released by
              the next preset; locks the user set by hand are hard and survive. */
           const presetLockKeys = new Set();
@@ -2583,9 +2585,37 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
           }
 
           function cyberRainFactory(getStrength, persistent) {
+              /* Phase 1: per-column glyph rings — cached, refreshed on a
+                 row-step or a SignalGlyphs.version change instead of a fresh
+                 pickFor call per cell per frame. When SignalGlyphs is absent
+                 the rain falls back to the engine's virtual typeset. */
+              const RING = 12;
+              const columns = [];
+              let ringVersion = -1;
+              const rainGlyph = () => {
+                  const G = window.SignalGlyphs;
+                  if (G && typeof G.pickFor === 'function') return voiceGlyph('Cyber Rain');
+                  const E = window.GlitchEngine;
+                  const ts = E && E.TYPESETS && (E.TYPESETS.cyber || E.TYPESETS.katakana);
+                  const set = Array.isArray(ts) ? ts :
+                      (ts && typeof ts.chars === 'string' ? Array.from(ts.chars) : ['0', '1']);
+                  return set.length ? set[(Math.random() * set.length) | 0] : '0';
+              };
+              const columnRing = (i) => {
+                  let col = columns[i];
+                  if (!col) col = columns[i] = { row: null, ring: [] };
+                  while (col.ring.length < RING) col.ring.push(rainGlyph());
+                  return col;
+              };
               const render = () => {
                   const s = getStrength() * fxVoiceK('Cyber Rain');
-                  if (s < 0.001 || !window.SignalGlyphs) return;
+                  if (s < 0.001) return;
+                  const G = window.SignalGlyphs;
+                  const glyphVersion = G ? G.version : 0;
+                  if (glyphVersion !== ringVersion) {
+                      ringVersion = glyphVersion;
+                      columns.length = 0;
+                  }
                   const w = mainCanvas.width, h = mainCanvas.height, t = customTime / 1000;
                   const spacing = 35, cols = Math.min(70, Math.ceil(w / spacing));
                   const turn = fxKeyShift(151, 0.45);
@@ -2599,10 +2629,16 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                           if (seed > 0.17 + s * 0.68) continue;
                           const head = (t * (38 + seed * 60) + seed * h * 2) % (h + 250) - 100;
                           const trail = 3 + Math.floor(s * 8);
+                          const col = columnRing(i);
+                          const row = Math.floor(head / 18);
+                          if (row !== col.row) {
+                              col.row = row;
+                              col.ring[((row % RING) + RING) % RING] = rainGlyph();
+                          }
                           for (let j = 0; j < trail; j++) {
                               const y = head - j * 18;
                               if (y < 0 || y > h) continue;
-                              const glyph = voiceGlyph('Cyber Rain');
+                              const glyph = col.ring[(((row - j) % RING) + RING) % RING];
                               gctx.fillStyle = j === 0 ?
                                   fxHsla(headHue, 100, 94, 0.7 * s) :
                                   fxHsla(trailHue, 100, 61, s * 0.65 * (1 - j / trail));
@@ -3782,7 +3818,23 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               const BURN_VIVID = /NEON|N3ON|CYBER|SYNTH|CHROME|GLOW|SPECTRUM|SPECTRE|PRISM|DREAM|SUNSET|WAVE|PUNK|CITY|AURORA|PIXELDUST|RETROBYTE|RAIN|LASER|FLUX|BLOOM|LIGHT|SHELL|REBIRTH|DIGITAL|D1giTaL|THERMOPTIC|CAMO|MAJOR|TACHIKOMA|INFINITE|PHOSPHOR|HOLO/i;
               const BURN_DARK = /NULL|VOID|FAIL|CRASH|ERROR|BURN|DARK|BLACK|GHOST|ZERO|Z3R0|DELETE|WIPE|FATAL|VIRUS|V1RUS|CORRUPT|DEAD|KILL|ICE|SHADOW|DARKNET|SYSFAIL|BURNOUT|OVERLOAD|FEAR|F34R|COMMA|C0MM4|PUPPET|DUB|BARRIER|INNOCENCE|HACK/i;
               const BURN_KEYS = GHOST_KEY_PHRASES.concat(BURN_WORDS.slice(0, 96));
+              /* Phase 1: when a glyph table is selected, the burn speaks that
+                 alphabet — words become runs of the voice's rotated table.
+                 'Engine realms (Revision 3)' keeps the classic word pools. */
+              const routedBurnSet = () => {
+                  const G = window.SignalGlyphs;
+                  if (!G || typeof G.setFor !== 'function' || G.current === 'Engine realms (Revision 3)') return null;
+                  return G.setFor('Font Burn', null);
+              };
+              const glyphBurnWord = (set) => {
+                  const n = 3 + ((Math.random() * 6) | 0);
+                  let out = '';
+                  for (let i = 0; i < n; i++) out += set[(Math.random() * set.length) | 0];
+                  return out;
+              };
               const pickWord = () => {
+                  const routed = routedBurnSet();
+                  if (routed && routed.length) return glyphBurnWord(routed);
                   if (Math.random() < 0.14) {
                       return BURN_KEYS[(Math.random() * Math.min(BURN_KEYS.length, 12)) | 0];
                   }
@@ -4384,6 +4436,22 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                   '!@#$%^&*()_+-=[]{}|;:,.<>?/~`').split('');
               const INK_SIGIL = '░▒▓█▄▀■□◆◇▲▼●○★☆✦✧†‡§¶∞≈≠≤≥∑∫µ±÷×'.split('');
               const INK_BANK = INK_ALPHA.concat(INK_SIGIL);
+              /* Phase 1: a selected glyph table replaces the ink alphabet with
+                 the voice's rotated table; 'Engine realms (Revision 3)' keeps
+                 the classic letterform/sigil split. */
+              const routedInkSet = () => {
+                  const G = window.SignalGlyphs;
+                  if (!G || typeof G.setFor !== 'function' || G.current === 'Engine realms (Revision 3)') return null;
+                  return G.setFor('Ink Glyphs', INK_BANK);
+              };
+              const pickInkChar = () => {
+                  const routed = routedInkSet();
+                  if (routed && routed.length) return routed[(Math.random() * routed.length) | 0];
+                  return (Math.random() < R16.sigilBias()) ? /* R1.6: source picks the alphabet */
+                      INK_SIGIL[(Math.random() * INK_SIGIL.length) | 0] :
+                      INK_ALPHA[(Math.random() * INK_ALPHA.length) | 0];
+              };
+              let inkGlyphVersion = -1;
               /* the three inks — rainbow dominates; jetblack and white
                  light strike through it like lacquer and glare */
               const pickInk = () => {
@@ -4396,9 +4464,7 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                   glyphs.push({
                       x: Math.random() * w,                        // uniform-random:
                       y: Math.random() * h,                        // may overlap, may
-                      ch: (Math.random() < R16.sigilBias()) ? /* R1.6: source picks the alphabet */
-                          INK_SIGIL[(Math.random() * INK_SIGIL.length) | 0] :
-                          INK_ALPHA[(Math.random() * INK_ALPHA.length) | 0], // sit far apart
+                      ch: pickInkChar(),                           // sit far apart
                       /* R1.4: the rainbow ink orbits the source's spectrum —
                          vivid videos tighten the wheel, grey ones open it */
                       hue: (videoPalette.hue + (Math.random() - 0.5) * 360 * srcSpreadK() + 360) % 360,
@@ -4423,6 +4489,14 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                   const dt = (lastT === null) ? 0.016 :
                       Math.max(0.001, Math.min(0.1, (now - lastT) / 1000));
                   lastT = now;
+                  /* Phase 1: a glyph-table change restrikes the live stamps so
+                     the ink switches alphabets within a frame. */
+                  const GS = window.SignalGlyphs;
+                  const inkVersion = GS ? GS.version : 0;
+                  if (inkVersion !== inkGlyphVersion) {
+                      inkGlyphVersion = inkVersion;
+                      for (let i = 0; i < glyphs.length; i++) glyphs[i].ch = pickInkChar();
+                  }
                   /* the ensemble keys the ink's appearance RATE, never its
                      opacity — the flow carries gate + duck + masters */
                   const flow = effectPaintAlpha('Ink Glyphs', s, comboProfile.glowMult || 1);
@@ -4507,6 +4581,7 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
           function glitchMatrixAsciiFactory(getStrength, isPersistent) {
               const streams = [];
               let lastT = null;
+              let glyphVersion = -1; /* Phase 1: tracks SignalGlyphs.version */
               const boardCtx = () => ({
                   ghost: getGhostMode(), vsync: getVsyncMode(),
                   warp: isAiWarpActive, bw: bwMasterLevel()
@@ -4543,6 +4618,20 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                   const now = customTime;
                   const dt = lastT == null ? 0.016 : Math.min(0.05, (now - lastT) / 1000);
                   lastT = now;
+                  /* Phase 1: a glyph-table change repopulates every column's
+                     chars in place, so the rain swaps alphabets within a frame
+                     instead of churning only as streams recycle. */
+                  const GS = window.SignalGlyphs;
+                  const gv = GS ? GS.version : 0;
+                  if (gv !== glyphVersion) {
+                      glyphVersion = gv;
+                      for (let i = 0; i < streams.length; i++) {
+                          const st = streams[i];
+                          for (let k = 0; k < st.glyphs.length; k++) {
+                              st.glyphs[k].ch = voiceGlyph('Matrix ASCII', st.realm, k % 3);
+                          }
+                      }
+                  }
                   /* R2 SOFT-EYE: fewer streams when calm (×0.48), full rain only in a crescendo */
                   const nWant = Math.round(((realm === 'virtual' ? 16 : 9) + s * (realm === 'virtual' ? 30 : 18)) *
                       GlitchEngine.softMatrixK(softK()));
@@ -4607,6 +4696,7 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
           function glitchMatrixChordFactory(getStrength, isPersistent) {
               const drops = [[], [], []];
               let lastT = null;
+              let glyphVersion = -1; /* Phase 1: tracks SignalGlyphs.version */
               const boardCtx = () => ({
                   ghost: getGhostMode(), vsync: getVsyncMode(),
                   warp: isAiWarpActive, bw: bwMasterLevel()
@@ -4623,6 +4713,17 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                   const now = customTime;
                   const dt = lastT == null ? 0.016 : Math.min(0.05, (now - lastT) / 1000);
                   lastT = now;
+                  /* Phase 1: a glyph-table change restrikes every falling drop
+                     in place so all three chord tones swap alphabets at once. */
+                  const GS = window.SignalGlyphs;
+                  const gv = GS ? GS.version : 0;
+                  if (gv !== glyphVersion) {
+                      glyphVersion = gv;
+                      for (let t3 = 0; t3 < 3; t3++) {
+                          const list = drops[t3];
+                          for (let i = 0; i < list.length; i++) list[i].ch = voiceGlyph('Matrix Chord', realm, t3);
+                      }
+                  }
                   const bw = bwInvertMap(bwMasterLevel());
                   const chord = FX_CHORDS[FX_KEY.idx] || FX_CHORDS[0];
                   const nPer = 4 + Math.round(s * 9);
@@ -8585,6 +8686,9 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                  Randomize All works correctly after ZERO ALL. */
               const eng = window.GlitchEngine;
               const rngFn = Math.random;
+              /* Phase 1: Randomize All also rolls a renderable glyph bank,
+                 unless the glyph table is hard-locked. */
+              if (!sliderLocks.glyphBank) rollGlyphBank(rngFn);
               const allNonLight = profileNames.filter((n) => !isManualLight(n));
               const count = 3 + ((rngFn() * 7) | 0); // 3–9 active voices
               const shuffled = eng && eng.fisherYates ? eng.fisherYates(allNonLight, rngFn) : allNonLight.slice().sort(() => rngFn() - 0.5);
@@ -8634,6 +8738,15 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               const seed32 = eng && eng.hashSeed ? eng.hashSeed(seed) : (((+seed || 0) * 0xFFFFFFFF) >>> 0) || 1;
               const rng = eng && eng.mulberry32 ? eng.mulberry32(seed32) : (function(s) { return function() { s = (s * 9301 + 49297) % 233280; return s / 233280; }; })(seed32);
               customTime = rng() * 86400000;
+              /* Phase 1: the seed also deterministically selects a renderable
+                 glyph bank from the same rng, unless the table is locked. */
+              if (!sliderLocks.glyphBank && window.SignalGlyphs) {
+                  const bank = pickRenderableGlyphBank(rng);
+                  if (bank === 'All scripts' && typeof window.SignalGlyphs.reshuffleAllScripts === 'function') {
+                      window.SignalGlyphs.reshuffleAllScripts(seed32);
+                  }
+                  window.SignalGlyphs.set(bank);
+              }
 
               /* Select a curated subset (3–10 voices) instead of driving all 41 */
               const allNonLight = profileNames.filter((n) => !isManualLight(n));
@@ -8675,6 +8788,86 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                   applyRandomSeed(parseFloat(randomSeedSlider.value));
               });
           }
+
+          /* ------------------------------------------------------------------ *
+           *  16b. Phase 1 — ASCII / glyph table randomization controls          *
+           * ------------------------------------------------------------------ */
+          const glyphRandBtn = $('glyphRandBtn');
+          const glyphAutoBtn = $('glyphAutoBtn');
+          const glyphLockBtn = $('glyphLockBtn');
+          let glyphAutoActive = false;
+          let glyphAutoNextAt = 0;
+
+          /* Weighted renderable pick: 10% 'Engine realms (Revision 3)', 10%
+             'All scripts', 80% a specific script from the font-guarded pool. */
+          function pickRenderableGlyphBank(rng) {
+              const G = window.SignalGlyphs;
+              if (!G) return 'Engine realms (Revision 3)';
+              const pool = (Array.isArray(G.renderableNames) && G.renderableNames.length) ?
+                  G.renderableNames : G.names;
+              const r = rng();
+              if (r < 0.10 || !pool.length) return 'Engine realms (Revision 3)';
+              if (r < 0.20) return 'All scripts';
+              return pool[Math.min(pool.length - 1, (rng() * pool.length) | 0)];
+          }
+
+          function rollGlyphBank(rng) {
+              const G = window.SignalGlyphs;
+              if (!G) return null;
+              const bank = pickRenderableGlyphBank(rng || Math.random);
+              if (bank === 'All scripts' && typeof G.reshuffleAllScripts === 'function') {
+                  G.reshuffleAllScripts();
+              }
+              G.set(bank);
+              return bank;
+          }
+
+          function syncGlyphControlsUi() {
+              if (glyphLockBtn) {
+                  glyphLockBtn.classList.toggle('locked', !!sliderLocks.glyphBank);
+                  glyphLockBtn.textContent = sliderLocks.glyphBank ? '[LOCKED!]' : '<LOCK!>';
+              }
+              if (glyphAutoBtn) {
+                  glyphAutoBtn.classList.toggle('auto-on', glyphAutoActive);
+                  glyphAutoBtn.textContent = 'Glyph Auto: ' + (glyphAutoActive ? 'ON' : 'OFF');
+              }
+          }
+
+          /* Glyph Auto cadence: 12–24s calm, 5–9s inside a Soft-Eye crescendo.
+             Runs from the frame loop, so it only cycles while playback is on,
+             and the glyph hard lock freezes it entirely. */
+          function glyphAutoStep(now) {
+              if (!glyphAutoActive || sliderLocks.glyphBank) return;
+              if (!glyphAutoNextAt) { glyphAutoNextAt = now + 1200; return; }
+              if (now < glyphAutoNextAt) return;
+              const pace = softWild() ? [5000, 9000] : [12000, 24000];
+              glyphAutoNextAt = now + pace[0] + Math.random() * (pace[1] - pace[0]);
+              rollGlyphBank(Math.random);
+          }
+
+          if (glyphRandBtn) {
+              glyphRandBtn.addEventListener('click', () => {
+                  const bank = rollGlyphBank(Math.random);
+                  if (bank) showNotificationMessage('GLYPH ROLL — ' + bank, 1800);
+              });
+          }
+          if (glyphAutoBtn) {
+              glyphAutoBtn.addEventListener('click', () => {
+                  glyphAutoActive = !glyphAutoActive;
+                  glyphAutoNextAt = glyphAutoActive ? performance.now() + 1200 : 0;
+                  syncGlyphControlsUi();
+                  showNotificationMessage(glyphAutoActive ?
+                      'GLYPH AUTO ON — new table every 12–24s (5–9s in a crescendo)' :
+                      'GLYPH AUTO OFF', 2200);
+              });
+          }
+          if (glyphLockBtn) {
+              glyphLockBtn.addEventListener('click', () => {
+                  toggleUserLock('glyphBank');
+                  syncGlyphControlsUi();
+              });
+          }
+          syncGlyphControlsUi();
 
           /* ------------------------------------------------------------------ *
            *  17. Ghost / V-Sync / AI Warp button logic                          *
@@ -9662,6 +9855,10 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               presetLockKeys.forEach((key) => { sliderLocks[key] = false; });
               presetLockKeys.clear();
               const held = (key) => !!sliderLocks[key];
+              /* Phase 1: capture the user's glyph hard lock before this
+                 preset's own locks apply, so a preset carrying a glyph lock
+                 still seats its own table while a hand lock always holds. */
+              const glyphBankHeld = held('glyphBank');
               const travelTo = {};
               for (let i = 0; i < profileNames.length; i++) {
                   const name = profileNames[i];
@@ -9752,8 +9949,8 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                       }
                   }
               }
-              if (s.glyphBank && window.SignalGlyphs) {
-                  window.SignalGlyphs.set(s.glyphBank);
+              if (s.glyphBank && window.SignalGlyphs && !glyphBankHeld) {
+                  window.SignalGlyphs.set(s.glyphBank, { fallbackRenderable: true });
               }
               if (s.toggles) {
                   if (s.toggles.autoGlitch !== undefined) {
@@ -9840,6 +10037,7 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
                   vsyncLockBtn.classList.toggle('locked', !!sliderLocks.vsync);
                   vsyncLockBtn.textContent = sliderLocks.vsync ? '[LOCKED!]' : '<LOCK!>';
               }
+              syncGlyphControlsUi();
               if (isAiWarpActive) updateAiWarp(performance.now());
               updateGhostUi();
               updateVsyncUi();
@@ -10991,6 +11189,7 @@ const chars = Array.from(latin + cyrillic + greek + katakana + hebrew + arabic +
               try { stepFxEnsemble(now, dt); } catch (e) {}
               try { softStep(now, dt); } catch (e) {}   /* R2 SOFT-EYE: ear → crescendo → burst gate */
               presetAutoStep(now); // v11: " -ʁ%AUTO%ʁ- " preset cycler (9.5–19.5s cadence, 3.8–6.6s in a crescendo)
+              glyphAutoStep(now); // Phase 1: Glyph Auto table cycler (12–24s calm, 5–9s in a crescendo)
               autoGlitchStep(now, dt);
               vsyncStepScript(now, dt);
               try { stepPresetTravel(now); } catch (e) {}

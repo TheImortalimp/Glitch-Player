@@ -1,12 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 import vm from 'node:vm';
-import { readWeb } from './harness.mjs';
+import { ROOT, readWeb } from './harness.mjs';
 
 const ENGINE = 'Engine realms (Revision 3)';
 const ALL = 'All scripts';
-const VOICES = ['ASCII', 'Cyber Rain', 'R3 ASCII', 'Matrix ASCII', 'Matrix Chord', 'R3 Matrix ASCII', 'R3 Matrix Chord',
-    'Data Bomb', 'R3 Data Bomb'];
+const VOICES = ['ASCII', 'R3 ASCII', 'Matrix ASCII', 'R3 Matrix ASCII', 'Matrix Chord', 'R3 Matrix Chord',
+    'Cyber Rain', 'Data Bomb', 'R3 Data Bomb', 'Ink Glyphs', 'R3 Ink Glyphs', 'Font Burn', 'R3 Font Burn'];
 const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
 const visible = (ch) => !/^\s+$/u.test(ch);
 
@@ -68,8 +70,9 @@ test('the selected table drives main ASCII and every sub-voice takes its own tab
     assert.equal(new Set(VOICES.map((voice) => G.tableFor(voice))).size, VOICES.length, 'no two voices share a table');
     G.set(G.names[124]);
     assert.equal(G.tableFor('ASCII'), G.names[124]);
-    assert.equal(G.tableFor('Cyber Rain'), G.names[0], 'the rotation wraps around');
+    assert.equal(G.tableFor('R3 ASCII'), G.names[0], 'the rotation wraps around');
     assert.equal(G.tableFor('R3 Data Bomb'), G.names[7]);
+    assert.equal(G.tableFor('R3 Font Burn'), G.names[11]);
     assert.equal(G.tableFor('Some other voice'), G.names[124], 'unknown voices follow the main table');
     assert.deepEqual([...G.rotation()].map((r) => r.table), VOICES.map((voice) => G.tableFor(voice)));
     for (const mode of [ALL, ENGINE]) {
@@ -89,7 +92,7 @@ test('per-voice glyph sets are stable arrays refilled in place, without whitespa
     const ascii = G.setFor('ASCII', fallback);
     const rain = G.setFor('Cyber Rain');
     assert.deepEqual([...ascii], [...G.banks[G.names[0]]].filter(visible));
-    assert.deepEqual([...rain], [...G.banks[G.names[1]]].filter(visible));
+    assert.deepEqual([...rain], [...G.banks[G.names[6]]].filter(visible));
     const stamp = ascii.glyphVersion;
     assert.equal(G.setFor('ASCII', fallback), ascii, 'same array while nothing changed');
     assert.equal(ascii.glyphVersion, stamp, 'no refill while nothing changed');
@@ -100,7 +103,7 @@ test('per-voice glyph sets are stable arrays refilled in place, without whitespa
     assert.equal(G.setFor('ASCII', fallback), ascii, 'a voice that captured its array keeps following the selection');
     assert.ok(ascii.glyphVersion > stamp);
     assert.deepEqual([...ascii], [...G.banks[G.names[3]]].filter(visible));
-    assert.deepEqual([...G.setFor('Cyber Rain')], [...G.banks[G.names[4]]].filter(visible));
+    assert.deepEqual([...G.setFor('Cyber Rain')], [...G.banks[G.names[9]]].filter(visible));
 
     G.set(ENGINE);
     assert.deepEqual([...G.setFor('ASCII', ['A', ' ', 'B'])], ['A', 'B'], 'Engine realms keeps the voice glyphs');
@@ -163,9 +166,10 @@ test('the glyph select and info line show the selection and the sub-voice rotati
     const lines = info.title.split('\n');
     assert.equal(lines.length, VOICES.length + 1);
     assert.equal(lines[0], 'Main ASCII: ' + G.names[0]);
-    assert.equal(lines[1], 'Cyber Rain: ' + G.names[1]);
+    assert.equal(lines[1], 'R3 ASCII: ' + G.names[1]);
     assert.equal(lines[8], 'R3 Data Bomb: ' + G.names[8]);
-    assert.match(lines[9], /^Unicode 15\.1\.0 tables: verified \(125 tables, 127\D?648 code points\)$/);
+    assert.equal(lines[12], 'R3 Font Burn: ' + G.names[12]);
+    assert.match(lines[13], /^Unicode 15\.1\.0 tables: verified \(125 tables, 127\D?648 code points\)$/);
     G.set(ALL);
     assert.equal(select.value, ALL);
     assert.match(info.textContent, /every voice mixes 125 tables$/);
@@ -180,9 +184,20 @@ test('host and Revision 3 glyph voices are routed through the per-voice tables',
     assert.match(player, /ch: voiceGlyph\('Matrix ASCII', realm, k % 3\)/);
     assert.match(player, /ch: voiceGlyph\('Matrix Chord', realm, tone\)/);
     assert.match(player, /const glyphAtlas = voiceGlyphAtlas\('Data Bomb'\);/);
+    assert.match(player, /G\.setFor\('Ink Glyphs', INK_BANK\)/, 'Ink Glyphs reads its rotated table');
+    assert.match(player, /G\.setFor\('Font Burn', null\)/, 'Font Burn reads its rotated table');
+    assert.match(player, /const routed = routedBurnSet\(\);\s*if \(routed && routed\.length\) return glyphBurnWord\(routed\);/,
+        'Font Burn words become glyph runs when a table is selected');
+    assert.match(player, /G\.current === 'Engine realms \(Revision 3\)'\) return null;[\s\S]*?return G\.setFor\('Ink Glyphs', INK_BANK\);/,
+        'Engine realms keeps the classic ink typesets');
     assert.match(r3, /glyphs\.withVoice\('R3 ' \+ baseName, render\)/);
     assert.match(r3, /G\.setFor\('R3 ' \+ glyphVoice, R3_ATLAS_CHARS\)/);
     assert.match(r3, /G\.setFor\('R3 Data Bomb', R3_ATLAS_CHARS\)/);
+    assert.match(r3, /const GLYPH_TEXT_VOICES = \{ 'Ink Glyphs': true, 'Font Burn': true \};/,
+        'the R3 twins of the banked text voices are glyph-routed');
+    assert.match(r3, /const set = G\.setFor\('R3 ' \+ voice, R3_ATLAS_CHARS\);/,
+        'R3 Ink Glyphs / Font Burn remap their text through the rotated table');
+    assert.match(r3, /if \(GLYPH_TEXT_VOICES\[baseName\]\) gctx = routedGlyphContext\(context\);/);
     const verbatim = r3.slice(r3.indexOf('/* ===== BEGIN VERBATIM GLITCH REVISION 3 FACTORY SOURCE ===== */'));
     assert.doesNotMatch(verbatim.slice(0, verbatim.indexOf('END VERBATIM')), /SignalGlyphs|setFor|withVoice|glyphVoice/,
         'the verbatim Revision 3 source is untouched');
@@ -224,14 +239,147 @@ test('Revision 3 ASCII follows table changes made after the R3 engine was create
     alphas['ASCII GC#(3)'] = 1;
     G.set(G.names[10]);
     paintAll();
-    assert.equal(G.tableFor('R3 ASCII'), G.names[12]);
-    assert.deepEqual([...chSet], [...G.banks[G.names[12]]].filter(visible), 'the captured set takes the rotated table');
+    assert.equal(G.tableFor('R3 ASCII'), G.names[11]);
+    assert.deepEqual([...chSet], [...G.banks[G.names[11]]].filter(visible), 'the captured set takes the rotated table');
 
     G.set(G.names[40]);
     paintAll();
-    assert.deepEqual([...chSet], [...G.banks[G.names[42]]].filter(visible));
+    assert.deepEqual([...chSet], [...G.banks[G.names[41]]].filter(visible));
 
     G.set(ENGINE);
     paintAll();
     assert.deepEqual([...chSet], engineGlyphs, 'switching back restores the Revision 3 glyphs');
+});
+
+test('the effects manifest pins exactly the 13 SignalGlyphs voices', () => {
+    const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'webui', 'data', 'effects.manifest.json'), 'utf8'));
+    const flagged = manifest.voices.filter((v) => v.glyphVoice).map((v) => v.id).sort();
+    assert.deepEqual(flagged, [...VOICES].sort());
+    const { G } = glyphSandbox();
+    assert.deepEqual([...G.voices], VOICES);
+});
+
+test('headless stubs without a 2D canvas treat every table as renderable', () => {
+    const { G } = glyphSandbox();
+    assert.deepEqual([...G.renderableNames], [...G.names]);
+    assert.deepEqual([...G.unfontedNames], []);
+    assert.ok(Object.isFrozen(G.renderableNames) && Object.isFrozen(G.unfontedNames));
+});
+
+test("the 'All scripts' sampler is seeded: identical seeds redraw identical mixes, new seeds reshuffle", () => {
+    const first = glyphSandbox().G;
+    first.set(ALL);
+    first.reseed(42);
+    const ascii42 = [...first.setFor('ASCII')];
+    const rain42 = [...first.setFor('Cyber Rain')];
+    assert.ok(ascii42.length > 0 && rain42.length > 0);
+    assert.notDeepEqual(ascii42, rain42, 'every voice draws its own mix');
+    first.reseed(42);
+    assert.deepEqual([...first.setFor('ASCII')], ascii42, 'the same seed redraws the same mix');
+    assert.deepEqual([...first.setFor('Cyber Rain')], rain42);
+    first.reseed(43);
+    assert.notDeepEqual([...first.setFor('ASCII')], ascii42, 'a new seed reshuffles');
+    const beforeVersion = first.version;
+    first.reshuffleAllScripts(42);
+    assert.ok(first.version > beforeVersion, 'a reshuffle bumps the version so captured sets refill');
+    assert.deepEqual([...first.setFor('ASCII')], ascii42);
+    const tick = first.version;
+    first.reshuffleAllScripts();
+    assert.ok(first.version > tick, 'an unseeded reshuffle advances to a fresh mix');
+    const second = glyphSandbox().G;
+    second.set(ALL);
+    second.reshuffleAllScripts(42);
+    assert.deepEqual([...second.setFor('ASCII')], ascii42, 'no Math.random leak — a second context redraws identically');
+});
+
+/* Loads the real glyph library over a stub canvas whose 2D context renders a
+   recognizable .notdef signature for the given code points, exercising the
+   font-coverage probe exactly as a WebView2 host with a missing font would. */
+function probeSandbox(unsupported) {
+    const elements = {
+        'glyph-bank': {
+            value: '', options: [],
+            appendChild(option) { this.options.push(option); },
+            addEventListener() {},
+        },
+        'glyph-info': { textContent: '', title: '' },
+    };
+    let lastCp = -1;
+    const ctx = {
+        clearRect() { lastCp = -1; },
+        fillText(ch) { lastCp = ch.codePointAt(0); },
+        getImageData(x, y, w, h) {
+            const data = new Uint8ClampedArray(w * h * 4);
+            const tofu = lastCp === 0xffff || lastCp === 0xfffd || unsupported(lastCp);
+            for (let i = 0; i < data.length; i += 4) { data[i] = tofu ? 0xab : 1; data[i + 3] = 255; }
+            return { data };
+        },
+    };
+    const canvas = { width: 0, height: 0, getContext: (kind) => (kind === '2d' ? ctx : null) };
+    const sandbox = {
+        console,
+        document: {
+            getElementById: (id) => elements[id] || null,
+            createElement: (tag) => (tag === 'canvas' ? canvas : {}),
+        },
+    };
+    sandbox.window = sandbox;
+    vm.createContext(sandbox);
+    vm.runInContext(readWeb('js/glyph-tables.js'), sandbox, { filename: 'js/glyph-tables.js' });
+    vm.runInContext(readWeb('js/glyph-library.js'), sandbox, { filename: 'js/glyph-library.js' });
+    return { G: sandbox.SignalGlyphs, elements };
+}
+
+test('the font probe partitions unfonted tables out of every random pool and maps presets onto renderable ones', () => {
+    const { G, elements } = probeSandbox((cp) => cp >= 0x0780 && cp <= 0x07bf); // no Thaana font on this host
+    assert.ok(G.names.includes('Thaana'));
+    assert.deepEqual([...G.unfontedNames], ['Thaana']);
+    assert.equal(G.renderableNames.length, G.names.length - 1);
+    assert.ok(!G.renderableNames.includes('Thaana'));
+    const option = elements['glyph-bank'].options.find((o) => o.value === 'Thaana');
+    assert.match(option.textContent, /\[no system font\]$/);
+    G.set(G.renderableNames[0]);
+    for (const voice of VOICES) {
+        assert.notEqual(G.tableFor(voice), 'Thaana', voice + ' rotates over renderable tables only');
+    }
+    const rng = seeded();
+    G.set('All scripts');
+    const thaana = new Set(G.banks['Thaana']);
+    for (let i = 0; i < 400; i++) {
+        assert.ok(!thaana.has(G.pickFor('ASCII', rng)), "the 'All scripts' pool skips unfonted tables");
+    }
+    for (const ch of G.setFor('Matrix ASCII')) assert.ok(!thaana.has(ch));
+    G.set('Thaana');
+    assert.equal(G.current, 'Thaana', 'a hand pick may still select an unfonted table');
+    G.set('Thaana', { fallbackRenderable: true });
+    const mapped = G.current;
+    assert.notEqual(mapped, 'Thaana');
+    assert.ok(G.renderableNames.includes(mapped), 'preset fallback lands on a renderable table');
+    G.set('Thaana', { fallbackRenderable: true });
+    assert.equal(G.current, mapped, 'the fallback mapping is deterministic');
+});
+
+test('glyph roll, auto-cycle and the glyph hard lock are wired into the board, the seed, presets and the frame loop', () => {
+    const player = readWeb('js/glitch-player.js');
+    const html = readWeb('index.html');
+    assert.match(html, /<button id="glyphRandBtn" type="button"[^>]*>Glyph Roll<\/button>/);
+    assert.match(html, /<button id="glyphAutoBtn" type="button"[^>]*>Glyph Auto: OFF<\/button>/);
+    assert.match(html, /<button id="glyphLockBtn" type="button" class="lock-button"[^>]*>&lt;LOCK!&gt;<\/button>/);
+    assert.match(player, /const sliderLocks = \{ global: false, glyphBank: false \};/,
+        'the glyph lock key is seeded so saved locks survive preset normalization');
+    assert.match(player, /if \(r < 0\.10 \|\| !pool\.length\) return 'Engine realms \(Revision 3\)';\s*if \(r < 0\.20\) return 'All scripts';/,
+        'Glyph Roll keeps the 10% / 10% / 80% odds');
+    const board = player.slice(player.indexOf('function randomizeBoard('), player.indexOf('function applyRandomSeed('));
+    assert.match(board, /if \(!sliderLocks\.glyphBank\) rollGlyphBank\(rngFn\);/, 'Randomize All rolls the bank unless locked');
+    assert.match(player, /if \(!sliderLocks\.glyphBank && window\.SignalGlyphs\) \{\s*const bank = pickRenderableGlyphBank\(rng\);/,
+        'Random Seed picks the bank deterministically from its rng unless locked');
+    assert.match(player, /function glyphAutoStep\(now\) \{\s*if \(!glyphAutoActive \|\| sliderLocks\.glyphBank\) return;/,
+        'Glyph Auto respects the hard lock');
+    assert.match(player, /const pace = softWild\(\) \? \[5000, 9000\] : \[12000, 24000\];/,
+        'Glyph Auto cadence: 12-24s calm, 5-9s in a crescendo');
+    assert.match(player, /^\s*glyphAutoStep\(now\);/m, 'the frame loop (playback on) steps Glyph Auto');
+    assert.match(player, /if \(s\.glyphBank && window\.SignalGlyphs && !glyphBankHeld\) \{\s*window\.SignalGlyphs\.set\(s\.glyphBank, \{ fallbackRenderable: true \}\);/,
+        'presets seat their glyph bank through the renderable fallback unless hard-locked');
+    assert.match(player, /glyphLockBtn\.addEventListener\('click', \(\) => \{\s*toggleUserLock\('glyphBank'\);/,
+        'the lock button is a user hard lock');
 });
